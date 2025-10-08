@@ -1,0 +1,64 @@
+{
+    "workbench.colorTheme": "Monokai",
+    "fileTemplates.templates_dir": "/home/ubuntu/ros_file_templates",
+    "files.associations": {
+        "*.launch": "xml",
+        "*.launch.xml": "xml",
+        "*.test": "xml",
+        "*.urdf.xacro": "xml",
+        "*.urdf": "xml",
+        "model.config": "xml",
+        "*.sdf": "xml",
+        "*.world": "xml"
+    },
+    // ignore hidden files in the vscode file editor
+    "files.exclude": {
+        "**/.*": true
+    },
+    "xml.fileAssociations": [
+        {
+            "systemId": "/opt/xsd/package.xml/package_format2.xsd",
+            "pattern": "package.xml"
+        },
+        {
+            "systemId": "/opt/xsd/roslaunch/roslaunch.xsd",
+            "pattern": "**/*.launch"
+        },
+        {
+            "systemId": "/opt/xsd/roslaunch/roslaunch.xsd",
+            "pattern": "**/*.test"
+        },
+        {
+            "systemId": "/opt/xsd/ros2launch/launch.0.1.1.xsd",
+            "pattern": "**/*.launch.xml"
+        },
+        {
+            "systemId": "/opt/xsd/urdf/urdf.xsd",
+            "pattern": "**/*.urdf.xacro"
+        },
+        {
+            "systemId": "/opt/xsd/urdf/urdf.xsd",
+            "pattern": "**/*.urdf"
+        },
+        {
+            "systemId": "/opt/xsd/sdf/root.xsd",
+            "pattern": "**/*.sdf"
+        },
+        {
+            "systemId": "/opt/xsd/sdf/root.xsd",
+            "pattern": "**/*.world"
+        }
+    ],
+    "C_Cpp.intelliSenseCacheSize": 0,
+    "C_Cpp.intelliSenseEngine": "Tag Parser",
+    "python.analysis.extraPaths": [
+        "/opt/ros/noetic/lib/python3/dist-packages"
+    ],
+    "terminal.integrated.profiles.linux": {
+                    "bash": {
+                        "path": "/usr/bin/bash",
+                        "icon": "terminal-bash"
+                    }
+                },
+    "terminal.integrated.defaultProfile.linux": "bash"
+}

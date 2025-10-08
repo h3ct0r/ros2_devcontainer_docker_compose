@@ -1,0 +1,11 @@
+# install code plugins and rosdep dependencies using the default user
+USER $USERNAME
+
+RUN touch /home/ubuntu/.Xauthority
+
+RUN echo "export PS1='[docker]\[\e[38;5;216m\]\u\[\e[38;5;160m\]@\[\e[38;5;202m\]\h \[\e[38;5;131m\]\w \[\033[0m\]$ '" >> /home/ubuntu/.bashrc
+
+# TODO: add the git clone command of your repo here
+
+RUN mkdir -p /home/ubuntu/ros2_ws/src
+RUN chown -R ubuntu:ubuntu /home/ubuntu/

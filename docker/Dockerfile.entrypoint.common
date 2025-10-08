@@ -1,0 +1,4 @@
+RUN sudo chown -R ubuntu:ubuntu /home/ubuntu
+
+ENTRYPOINT [ "/entrypoint.sh" ]
+CMD [ "sudo", "-E", "/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

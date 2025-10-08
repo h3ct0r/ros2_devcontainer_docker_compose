@@ -1,0 +1,33 @@
+services:
+  ros2:
+    container_name: ros2_humble_devel
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.amd64
+    ipc: host
+    pid: host
+    privileged: true
+    network_mode: bridge
+    ports:
+      - "3080:3080"
+      - "3081:3081"
+      - "3022:3022"
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - TZ=${TZ:-UTC}
+      - DEBIAN_FRONTEND=noninteractive
+      - ROS_AUTOMATIC_DISCOVERY_RANGE=localhost
+      - DOCKER_DEFAULT_PLATFORM=linux/amd64
+      # - LIBGL_ALWAYS_SOFTWARE=1   # force software rendering
+    volumes:
+      - ${localWorkspaceFolder:-./}local_mount/:/home/ubuntu/ros_ws
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /var/log/val_logger:/var/log/val_logger
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+      - SYS_PTRACE

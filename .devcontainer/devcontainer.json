@@ -1,0 +1,115 @@
+{
+    "name": "ROS2 Development Container",
+    "init": true,
+    "privileged": true,
+    "remoteUser": "ubuntu",
+    "service": "ros2",
+    "dockerComposeFile": [
+        "../compose_macos.yaml"  
+    ],
+    "waitFor": "postCreateCommand",
+    "workspaceFolder": "/home/ubuntu",
+    "customizations": {
+        "vscode": {
+            "extensions":[
+                "donjayamanne.python-extension-pack",
+                "ms-vscode.cpptools-themes",
+                "wholroyd.jinja",
+                "kevinrose.vsc-python-indent",
+                "njpwerner.autodocstring",
+                "batisteo.vscode-django",
+                "twxs.cmake",
+                "visualstudioexptteam.intellicode-api-usage-examples",
+                "ms-python.vscode-python-envs",
+                "donjayamanne.python-environment-manager",
+                "eamodio.gitlens",
+                "ms-python.debugpy",
+                "visualstudioexptteam.vscodeintellicode",
+                "ms-python.python",
+                "ms-vscode.cpptools",
+                "ms-python.vscode-pylance",
+                "ms-python.black-formatter",
+                "ms-vscode.cpptools-extension-pack",
+                "ms-vscode.cmake-tools",
+                "ranch-hand-robotics.rde-pack",
+                "ranch-hand-robotics.urdf-editor",
+                "ranch-hand-robotics.rde-ros-2",
+                "github.copilot"
+            ],
+            "settings": {
+                "terminal.integrated.profiles.linux": {
+                    "bash": {
+                        "path": "/usr/bin/bash",
+                        "icon": "terminal-bash"
+                    }
+                },
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "cmake.autoSelectActiveFolder": false,
+                "cmake.automaticReconfigure": false,
+                "cmake.configureOnEdit": false,
+                "cmake.ignoreCMakeListsMissing": true,
+                "workbench.colorTheme": "Monokai",
+                "fileTemplates.templates_dir": "/home/developer/templates",
+                "files.associations": {
+                    "*.launch": "xml",
+                    "*.launch.xml": "xml",
+                    "*.test": "xml",
+                    "*.urdf.xacro": "xml",
+                    "*.urdf": "xml",
+                    "model.config": "xml",
+                    "*.sdf": "xml",
+                    "*.world": "xml"
+                },
+                "xml.fileAssociations": [
+                    {
+                        "systemId": "/opt/xsd/package.xml/package_format2.xsd",
+                        "pattern": "package.xml"
+                    },
+                    {
+                        "systemId": "/opt/xsd/roslaunch/roslaunch.xsd",
+                        "pattern": "**/*.launch"
+                    },
+                    {
+                        "systemId": "/opt/xsd/roslaunch/roslaunch.xsd",
+                        "pattern": "**/*.test"
+                    },
+                    {
+                        "systemId": "/opt/xsd/ros2launch/launch.0.1.1.xsd",
+                        "pattern": "**/*.launch.xml"
+                    },
+                    {
+                        "systemId": "/opt/xsd/urdf/urdf.xsd",
+                        "pattern": "**/*.urdf.xacro"
+                    },
+                    {
+                        "systemId": "/opt/xsd/urdf/urdf.xsd",
+                        "pattern": "**/*.urdf"
+                    },
+                    {
+                        "systemId": "/opt/xsd/sdf/root.xsd",
+                        "pattern": "**/*.sdf"
+                    },
+                    {
+                        "systemId": "/opt/xsd/sdf/root.xsd",
+                        "pattern": "**/*.world"
+                    }
+                ],
+                "C_Cpp.intelliSenseCacheSize": 0,
+                "C_Cpp.intelliSenseEngine": "Tag Parser",
+                "python.analysis.extraPaths": [
+                    "/opt/ros/noetic/lib/python3/dist-packages"
+                ]
+            }
+        }
+    },
+    "containerEnv": {
+        "QT_X11_NO_MITSHM": "1",
+        "DISPLAY": "${localEnv:DISPLAY}",
+        "ROS_LOCALHOST_ONLY": "1",
+        "ROS_DOMAIN_ID": "42"
+    },
+    "initializeCommand": ".devcontainer/initialize.sh", // runs on the host machine before the container is created/recreated/executed
+    "postAttachCommand": "/postAttach.sh", // runs on the host once the user attaches to the dev container
+    "onCreateCommand": "/onCreate.sh", // runs after the container is built. It is executed inside the container, not on the host machine
+    "postCreateCommand": "/postCreate.sh" // runs once the dev container has been assigned to a user for the first time
+}

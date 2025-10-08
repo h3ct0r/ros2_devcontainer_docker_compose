@@ -1,0 +1,120 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "VNCbrowser",
+            "command": "${input:openSimpleBrowserVNC}",
+            "problemMatcher": [],
+            "presentation": {
+                "echo": false,  // silence "Executing task ..."
+                "focus": false,
+                "reveal": "always",
+                "panel": "new",
+                "group": "initial_opened_browser"
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
+            "label": "openInitialReadmeFile",
+            "command": "${input:openReadmeFile}",
+            "problemMatcher": [],
+            "presentation": {
+                "echo": false,  // silence "Executing task ..."
+                "focus": true,
+                "reveal": "always",
+                "panel": "new",
+                "group": "initial_opened_file"
+            },
+            // "runOptions": {
+            //     "runOn": "folderOpen"
+            // }
+        },
+        {
+            "type": "process",
+            "label": "initial_bash_term_1",
+            "command": "/bin/bash",  // <-- your shell here
+            "args": [
+                "-l"  // login shell for bash
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "echo": false,  // silence "Executing task ..."
+                "focus": false,
+                "group": "initial_bash_term",  // some arbitrary name for the group
+                "panel": "dedicated"
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
+            "type": "process",
+            "label": "initial_bash_term_2",
+            "command": "/bin/bash",  // <-- your shell here
+            "args": [
+                "-l"  // login shell for bash
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "echo": false,  // silence "Executing task ..."
+                "focus": false,
+                "group": "initial_bash_term",  // some arbitrary name for the group
+                "panel": "dedicated"
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
+            "label": "roscore",
+            "type": "shell",
+            "command": "bash -i -c roscore",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "rviz",
+            "type": "shell",
+            "command": "bash -i -c 'rosrun rviz rviz'",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "openReadmeFile",
+            "type": "command",
+            "command": "workbench.action.terminal.sendSequence",
+            "args": {
+                "text": "workbench.action.files.openFile local_mount/MOUNT_README.md\u000D"
+            }
+        },
+        {
+            "id": "packageName",
+            "type": "promptString",
+            "description": "Please enter the name of new package"
+        },
+        {
+            "id": "dependingPackages",
+            "type": "promptString",
+            "description": "Please enter name of depending packages",
+            "default": "roscpp std_msgs"
+        },
+        {
+            "id": "openSimpleBrowserVNC",
+            "type": "command",
+            "command": "simpleBrowser.show",
+            "args": [
+                "http://localhost:3080/"
+            ]
+        }
+    ]
+}

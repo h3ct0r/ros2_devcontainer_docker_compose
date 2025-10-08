@@ -1,0 +1,170 @@
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+SHELL ["/bin/bash", "-c"]
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV USERNAME=ubuntu
+ENV PASSWD=ubuntu
+ENV ROS_DISTRO=humble
+ENV ROS_WORKSPACE=/home/${USERNAME}/ros2_ws
+ENV COLCON_HOME=/home/${USERNAME}/.colcon
+ENV AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS=1
+
+# Create the user
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME -s /usr/bin/bash \
+    && apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y sudo \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+RUN usermod -aG sudo ubuntu
+
+# install graphic interface
+RUN apt-get install -y \
+    xfce4 \
+    xfce4-goodies \
+    at-spi2-core \
+    tigervnc-standalone-server \
+    tigervnc-common \
+    gosu \
+    supervisor
+
+# Install required additonal packages
+RUN apt-get install -y \
+    less \
+    build-essential \
+    nano \
+    vim \
+    iputils-ping \
+    net-tools \
+    unzip \
+    mesa-utils \
+    libompl-dev \
+    ompl-demos \
+    tmux \
+    dbus-x11 \
+    tree \
+    wget \
+    curl \
+    git \
+    lsb-release \
+    locales \
+    tzdata \
+    terminator \
+    ssh \
+    openssh-server \
+    libsecret-1-dev \
+    gnupg2 \
+    python3-pip \
+    python3-rosdep \
+    python3-vcstool \
+    python3-argcomplete \
+    python3-colcon-common-extensions \
+    ros-humble-desktop \
+    ros-humble-rqt* \
+    ros-humble-ament-* \
+    ros-humble-ros-ign-bridge \
+    ros-humble-teleop-twist-keyboard \
+    gdb \
+    firefox
+
+RUN su ${USERNAME} -c "rosdep update"; \
+    echo "export PATH=/home/${USERNAME}/.local/bin:${PATH}" && \
+	echo "source /usr/share/colcon_cd/function/colcon_cd.sh" >> /home/${USERNAME}/.bashrc && \
+    echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /home/${USERNAME}/.bashrc && \
+    echo "source ${ROS_WORKSPACE}/install/setup.bash" >> /home/${USERNAME}/.bashrc && \
+    echo 'if [ -z "${TMUX}" ] && [ "${TERM_PROGRAM}" != "vscode" ] && [ -z "${SESSION_MANAGER}" ]; then tmux attach -t default || tmux new -s default; fi' >> /home/${USERNAME}/.bashrc && \
+    echo "set -g mouse on" >> /home/${USERNAME}/.tmux.conf && \
+    mkdir -p ${ROS_WORKSPACE}/src && chown -R ${USERNAME}:${USERNAME} ${ROS_WORKSPACE}
+
+# Set up autocompletion for user
+RUN apt-get update && apt-get install -y --no-install-recommends git-core bash-completion \
+  && echo "if [ -f /opt/ros/${ROS_DISTRO}/setup.bash ]; then source /opt/ros/${ROS_DISTRO}/setup.bash; fi" >> /home/$USERNAME/.bashrc \
+  && echo "if [ -f /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash ]; then source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash; fi" >> /home/$USERNAME/.bashrc
+
+# Install gz
+RUN curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null && \
+    apt-get update && declare -A version=(["rolling"]="ionic" ["jazzy"]="harmonic" ["iron"]="fortress") && \
+    apt-get install -y ros-humble-ros-gz --no-install-recommends
+
+# copy files from host to container
+COPY configs/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY configs/supervisord/custom_programs.conf /etc/supervisor/conf.d/custom_programs.conf
+COPY configs/supervisord/code_server.conf /etc/supervisor/conf.d/code_server.conf
+COPY configs/xfce4_defaults /usr/share/xfwm4/defaults
+
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+COPY .devcontainer/onCreate.sh /onCreate.sh
+RUN chmod +x /onCreate.sh
+COPY .devcontainer/postCreate.sh /postCreate.sh
+RUN chmod +x /postCreate.sh
+COPY .devcontainer/postAttach.sh /postAttach.sh
+RUN chmod +x /postAttach.sh
+
+# Install OpenSSH Server and necessary tools
+# Set root password (replace 'your_password' with a strong password)
+# Allow root login (optional, but simplifies initial setup)
+RUN mkdir /var/run/sshd
+RUN echo 'ubuntu:ubuntu' | chpasswd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+# noVNC and Websockify
+RUN git clone https://github.com/AtsushiSaito/noVNC.git -b add_clipboard_support /usr/lib/novnc
+RUN pip install --no-cache-dir git+https://github.com/novnc/websockify.git@v0.10.0
+RUN ln -s /usr/lib/novnc/vnc.html /usr/lib/novnc/index.html
+
+# Set remote resize function enabled by default
+RUN sed -i "s/UI.initSetting('resize', 'off');/UI.initSetting('resize', 'remote');/g" /usr/lib/novnc/app/ui.js
+
+# Disable crash report
+RUN sed -i 's/enabled=1/enabled=0/g' /etc/default/apport 
+
+RUN sed -i '/power-manager-plugin/d' /etc/xdg/xfce4/panel/default.xml
+
+# colorize less
+RUN lesspipe >> ~/.bashrc && \
+    echo "export LESS='-R'" >> ~/.bashrc && \
+    echo "export PYGMENTIZE_STYLE='monokai'" >> ~/.bashrc && \
+    curl -sSL https://raw.githubusercontent.com/CoeJoder/lessfilter-pygmentize/master/.lessfilter > ~/.lessfilter && \
+    chmod 755 ~/.lessfilter
+
+# prepare vscode and home
+ADD .devcontainer/.vscode /home/ubuntu/.vscode
+
+# create logs for supervisor
+RUN mkdir -p /var/log/supervisor
+
+# clean all apt packages installed
+RUN rm -rf /var/lib/apt/lists/*
+
+# Enable apt-get completion after running `apt-get update` in the container
+RUN rm /etc/apt/apt.conf.d/docker-clean
+
+# prepare VNC
+RUN mkdir -p "/home/ubuntu/.vnc"
+RUN echo "$PASSWD" | vncpasswd -f > "/home/ubuntu/.vnc/passwd"
+RUN chmod 600 "/home/ubuntu/.vnc/passwd"
+
+COPY configs/vnc/vnc_run.sh /home/ubuntu/.vnc/
+RUN chmod +x /home/ubuntu/.vnc/vnc_run.sh
+
+COPY configs/vnc/xstartup /home/ubuntu/.vnc/
+RUN chmod +x /home/ubuntu/.vnc/xstartup
+
+RUN chown -R "$USERNAME:$USERNAME" "/home/ubuntu"
+RUN sed -i "s/password = WebUtil.getConfigVar('password');/password = '$PASSWD'/" /usr/lib/novnc/app/ui.js
+
+# prepare logger
+RUN mkdir -p /var/log/val_logger/noetic_devel
+RUN chown -R ubuntu: /var/log/val_logger/
+
+# Disable IPv6 within the container
+RUN echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf && \
+    echo "net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.conf && \
+    echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> /etc/sysctl.conf && \
+    sysctl -p
