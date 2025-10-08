@@ -1,4 +1,15 @@
 .DS_Store
+/.catkin_tools/
+/build_debug/
+/devel_debug/
+/logs_debug/
+/build_release/
+/devel_release/
+/logs_release/
+/build/
+/devel/
+/logs/
+.env
 
 # Prerequisites
 *.d
@@ -41,4 +52,3 @@
 
 # debug information files
 *.dwo
-*.env
