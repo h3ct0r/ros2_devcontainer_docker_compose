@@ -162,9 +162,3 @@ RUN sed -i "s/password = WebUtil.getConfigVar('password');/password = '$PASSWD'/
 # prepare logger
 RUN mkdir -p /var/log/val_logger/noetic_devel
 RUN chown -R ubuntu: /var/log/val_logger/
-
-# Disable IPv6 within the container
-RUN echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf && \
-    echo "net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.conf && \
-    echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> /etc/sysctl.conf && \
-    sysctl -p

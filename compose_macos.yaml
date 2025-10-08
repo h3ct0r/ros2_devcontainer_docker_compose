@@ -13,6 +13,7 @@ services:
       - "3080:3080"
       - "3081:3081"
       - "3022:3022"
+      - "5902:5902"
     environment:
       - DISPLAY=${DISPLAY:-:0}
       - NVIDIA_DRIVER_CAPABILITIES=all
@@ -20,13 +21,16 @@ services:
       - DEBIAN_FRONTEND=noninteractive
       - ROS_AUTOMATIC_DISCOVERY_RANGE=localhost
       - DOCKER_DEFAULT_PLATFORM=linux/amd64
-      - LIBGL_ALWAYS_SOFTWARE=1   # force software rendering
     volumes:
       - ${localWorkspaceFolder:-./}local_mount/:/home/ubuntu/ros2_ws
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
       - /tmp/.X11-unix:/tmp/.X11-unix
       - /var/log/val_logger:/var/log/val_logger
+    sysctls:
+      - "net.ipv6.conf.all.disable_ipv6=1"
+      - "net.ipv6.conf.default.disable_ipv6=1"
+      - "net.ipv6.conf.lo.disable_ipv6=1"
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
