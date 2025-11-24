@@ -68,7 +68,17 @@ RUN apt-get install -y \
     ros-humble-ament-* \
     ros-humble-ros-ign-bridge \
     ros-humble-teleop-twist-keyboard \
-    gdb \
+    ros-humble-twist-mux \
+ 	ros-humble-can-msgs \
+    ros-humble-ros2-socketcan \
+    htop \
+    gdb
+
+# Install test packages
+RUN apt-get install -y \
+    ffmpeg \
+    locate \
+    usbutils \
     firefox
 
 RUN su ${USERNAME} -c "rosdep update"; \
