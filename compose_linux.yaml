@@ -20,9 +20,10 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - /var/log/val_logger:/var/log/val_logger
-      - /dev/canusb_adapter:/dev/canusb_adapter
-      - /dev/ttyUM7_IMU:/dev/ttyUM7_IMU
+      - /dev:/dev
+    device_cgroup_rules:
+      - 'c 81:* rmw'
+      - 'c 189:* rmw'
     cap_add:
       - NET_ADMIN
       - SYS_MODULE

@@ -7,3 +7,5 @@
 # container is created. It and subsequent commands execute inside the   #
 # container immediately after it has started for the first time.        #
 # --------------------------------------------------------------------- #
+
+# touch oncreate_script_executed_$(date '+%Y-%m-%d_%H-%M-%S')

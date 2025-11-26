@@ -64,7 +64,7 @@ RUN apt-get install -y \
     python3-argcomplete \
     python3-colcon-common-extensions \
     ros-humble-desktop \
-    ros-humble-rqt* \
+    "ros-humble-rqt*" \
     ros-humble-ament-* \
     ros-humble-ros-ign-bridge \
     ros-humble-teleop-twist-keyboard \
@@ -72,7 +72,8 @@ RUN apt-get install -y \
  	ros-humble-can-msgs \
     ros-humble-ros2-socketcan \
     htop \
-    gdb
+    gdb \
+    unzip
 
 # Install test packages
 RUN apt-get install -y \
@@ -80,6 +81,11 @@ RUN apt-get install -y \
     locate \
     usbutils \
     firefox
+
+# install realsense packages
+RUN apt-get install -y \
+    "ros-humble-librealsense2*" \
+    "ros-humble-realsense2-*"
 
 RUN su ${USERNAME} -c "rosdep update"; \
     echo "export PATH=/home/${USERNAME}/.local/bin:${PATH}" && \
@@ -101,11 +107,23 @@ RUN curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyri
     apt-get update && declare -A version=(["rolling"]="ionic" ["jazzy"]="harmonic" ["iron"]="fortress") && \
     apt-get install -y ros-humble-ros-gz --no-install-recommends
 
+# Install livox SDK2
+RUN wget "https://github.com/Livox-SDK/Livox-SDK2/archive/refs/tags/v1.2.5.zip" -O /tmp/livox_sdk.zip && \
+    unzip -o /tmp/livox_sdk.zip -d /tmp/livox_sdk_src && \
+    cd /tmp/livox_sdk_src/Livox-SDK2-1.2.5/ && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j && \
+    make install
+
 # copy files from host to container
 COPY configs/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY configs/supervisord/custom_programs.conf /etc/supervisor/conf.d/custom_programs.conf
 COPY configs/supervisord/code_server.conf /etc/supervisor/conf.d/code_server.conf
-COPY configs/xfce4_defaults /usr/share/xfwm4/defaults
+COPY configs/xfce/xfce4_defaults /usr/share/xfwm4/defaults
+RUN mkdir -p "/home/ubuntu/.config/xfce4/xfconf/xfce-perchannel-xml/"
+COPY configs/xfce/xfce4-screensaver.xml /home/ubuntu/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-screensaver.xml
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
