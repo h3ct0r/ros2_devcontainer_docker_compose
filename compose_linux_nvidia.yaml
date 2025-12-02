@@ -1,0 +1,38 @@
+services:
+  ros2:
+    container_name: ros2_humble_devel
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.amd64
+    ipc: host
+    pid: host
+    privileged: true
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - TZ=${TZ:-UTC}
+      - DEBIAN_FRONTEND=noninteractive
+      - ROS_AUTOMATIC_DISCOVERY_RANGE=localhost
+      - DOCKER_DEFAULT_PLATFORM=linux/amd64
+    volumes:
+      - ${localWorkspaceFolder:-./}local_mount/:/home/ubuntu/ros2_ws
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev:/dev
+    device_cgroup_rules:
+      - 'c 81:* rmw'
+      - 'c 189:* rmw'
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+      - SYS_PTRACE
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              count: 1
