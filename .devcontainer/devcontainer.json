@@ -33,8 +33,7 @@
                 "ms-vscode.cmake-tools",
                 "ranch-hand-robotics.rde-pack",
                 "ranch-hand-robotics.urdf-editor",
-                "ranch-hand-robotics.rde-ros-2",
-                "github.copilot"
+                "ranch-hand-robotics.rde-ros-2"
             ],
             "settings": {
                 "terminal.integrated.profiles.linux": {
