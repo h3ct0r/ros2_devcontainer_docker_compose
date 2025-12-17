@@ -5,9 +5,20 @@ RUN touch /home/ubuntu/.Xauthority
 
 RUN echo "export PS1='[docker]\[\e[38;5;216m\]\u\[\e[38;5;160m\]@\[\e[38;5;202m\]\h \[\e[38;5;131m\]\w \[\033[0m\]$ '" >> /home/ubuntu/.bashrc
 
-RUN echo 'export PROMPT_COMMAND="history -a; history -c; history -r"' >> /home/ubuntu/.bashrc
+# Set history file location and size
+RUN echo 'HISTFILE=/home/ubuntu/.bash_history' >> /home/ubuntu/.bashrc
+RUN echo 'HHISTSIZE=9999     # Number of commands stored in memory' >> /home/ubuntu/.bashrc
+RUN echo 'HISTFILESIZE=99999  # Number of commands stored in the history file' >> /home/ubuntu/.bashrc
+
+# RUN echo 'export PROMPT_COMMAND="history -a; history -c; history -r"' >> /home/ubuntu/.bashrc
 
 # TODO: add the git clone command of your repo here
 
 RUN mkdir -p /home/ubuntu/ros2_ws/src
 RUN chown -R ubuntu:ubuntu /home/ubuntu/
+
+# remove the check for non interactive terminal
+RUN sed -i -e '/case $- in/,+3 s/^/#/g' /home/ubuntu/.bashrc
+
+# remove tmux stuff
+RUN sed -i -e '/TMUX/s/^/#/g' /home/ubuntu/.bashrc

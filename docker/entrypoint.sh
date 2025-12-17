@@ -1,5 +1,6 @@
 #!/bin/bash -e
 
 source /opt/ros/humble/setup.bash
-cd /home/ubuntu
+cd /home/ubuntu/ros2_ws/
+
 exec $@

@@ -38,6 +38,7 @@ RUN apt-get install -y \
     build-essential \
     nano \
     vim \
+    sed \
     iputils-ping \
     net-tools \
     unzip \
@@ -71,6 +72,7 @@ RUN apt-get install -y \
     ros-humble-twist-mux \
  	ros-humble-can-msgs \
     ros-humble-ros2-socketcan \
+    libasio-dev \
     htop \
     gdb \
     unzip
