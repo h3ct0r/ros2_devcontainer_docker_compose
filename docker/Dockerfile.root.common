@@ -84,6 +84,16 @@ RUN apt-get install -y \
     usbutils \
     firefox
 
+# nav2 requeriments
+RUN apt-get install -y \
+    libopenvdb-dev \
+    "ros-humble-navigation2*" \
+    "ros-humble-pointcloud-to-laserscan*" \
+    ros-humble-slam-toolbox \
+    ros-humble-spatio-temporal-voxel-layer \
+    "ros-humble-nav2-*" \
+    ros-humble-turtlebot3-gazebo
+
 # install realsense packages
 RUN apt-get install -y \
     "ros-humble-librealsense2*" \
@@ -190,5 +200,5 @@ RUN chown -R "$USERNAME:$USERNAME" "/home/ubuntu"
 RUN sed -i "s/password = WebUtil.getConfigVar('password');/password = '$PASSWD'/" /usr/lib/novnc/app/ui.js
 
 # prepare logger
-RUN mkdir -p /var/log/val_logger/noetic_devel
-RUN chown -R ubuntu: /var/log/val_logger/
+# RUN mkdir -p /var/log/val_logger/noetic_devel
+# RUN chown -R ubuntu: /var/log/val_logger/

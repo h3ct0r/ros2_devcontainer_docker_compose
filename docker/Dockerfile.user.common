@@ -6,7 +6,8 @@ RUN touch /home/ubuntu/.Xauthority
 RUN echo "export PS1='[docker]\[\e[38;5;216m\]\u\[\e[38;5;160m\]@\[\e[38;5;202m\]\h \[\e[38;5;131m\]\w \[\033[0m\]$ '" >> /home/ubuntu/.bashrc
 
 # Set history file location and size
-RUN echo 'HISTFILE=/home/ubuntu/.bash_history' >> /home/ubuntu/.bashrc
+# Set the bash history to the external mounted folder for persistence
+RUN echo 'HISTFILE=/home/ubuntu/ros2_ws/.bash_history' >> /home/ubuntu/.bashrc
 RUN echo 'HHISTSIZE=9999     # Number of commands stored in memory' >> /home/ubuntu/.bashrc
 RUN echo 'HISTFILESIZE=99999  # Number of commands stored in the history file' >> /home/ubuntu/.bashrc
 

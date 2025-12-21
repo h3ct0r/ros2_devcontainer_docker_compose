@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build and start Docker Compose services
-        run: docker compose -f compose_macos.yaml up -d --build
+        run: docker compose -f compose_linux.yaml up -d --build
 
       - name: Wait for services to be healthy (optional, but recommended)
         # You can use a dedicated action or a script to wait for health checks
@@ -78,4 +78,4 @@ jobs:
         run: docker ps -a
 
       - name: Stop and remove containers
-        run: docker compose -f compose_linux_nogpu.yaml down
+        run: docker compose -f compose_linux.yaml down
