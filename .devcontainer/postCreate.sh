@@ -14,4 +14,4 @@ cd /home/ubuntu/ros2_ws/
 
 rosdep install --from-paths /home/ubuntu/ros2_ws/src --ignore-src --rosdistro humble
 
-#MAKEFLAGS="-j6" colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+MAKEFLAGS="-j6" colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
