@@ -5,9 +5,9 @@ FROM arm64v8/ros:noetic-perception-focal AS arm64_build_state
 INCLUDE+ docker/Dockerfile.root.common
 
 # vscode server
-RUN  curl -fOL https://github.com/coder/code-server/releases/download/v4.104.2/code-server_4.104.2_arm64.deb && \
-    dpkg -i code-server_4.104.2_arm64.deb && \
-    rm code-server_4.104.2_arm64.deb
+# RUN  curl -fOL https://github.com/coder/code-server/releases/download/v4.104.2/code-server_4.104.2_arm64.deb && \
+#     dpkg -i code-server_4.104.2_arm64.deb && \
+#     rm code-server_4.104.2_arm64.deb
 
 # fix arm64 shared library for vscode and vnc services
 RUN wget http://ports.ubuntu.com/pool/main/libf/libffi/libffi8_3.4.2-4_arm64.deb -P /tmp && \

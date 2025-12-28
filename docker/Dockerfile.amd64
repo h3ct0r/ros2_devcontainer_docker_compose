@@ -1,13 +1,13 @@
 # syntax = edrevo/dockerfile-plus
 
-FROM osrf/ros:humble-desktop-full AS amd64_build_state
+FROM osrf/ros:humble-desktop-full@sha256:259c542d00f55e6380219c7ac0276eb12878ea7c36a856d187dc3fea1b70a6ce AS amd64_build_state
 
 INCLUDE+ docker/Dockerfile.root.common
 
 # vscode server
-RUN  curl -fOL https://github.com/coder/code-server/releases/download/v4.104.2/code-server_4.104.2_amd64.deb && \
-    dpkg -i code-server_4.104.2_amd64.deb && \
-    rm code-server_4.104.2_amd64.deb
+# RUN  curl -fOL https://github.com/coder/code-server/releases/download/v4.104.2/code-server_4.104.2_amd64.deb && \
+#     dpkg -i code-server_4.104.2_amd64.deb && \
+#     rm code-server_4.104.2_amd64.deb
 
 INCLUDE+ docker/Dockerfile.user.common
 INCLUDE+ docker/Dockerfile.entrypoint.common

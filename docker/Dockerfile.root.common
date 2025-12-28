@@ -84,17 +84,6 @@ RUN apt-get install -y \
     usbutils \
     firefox
 
-# nav2 requeriments
-RUN apt-get install -y \
-    libtbb-dev \
-    libopenvdb-dev \
-    "ros-humble-navigation2*" \
-    "ros-humble-pointcloud-to-laserscan*" \
-    ros-humble-slam-toolbox \
-    ros-humble-spatio-temporal-voxel-layer \
-    "ros-humble-nav2-*" \
-    ros-humble-turtlebot3-gazebo
-
 # install realsense packages
 RUN apt-get install -y \
     "ros-humble-librealsense2*" \
@@ -121,14 +110,34 @@ RUN curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyri
     apt-get install -y ros-humble-ros-gz --no-install-recommends
 
 # Install livox SDK2
-RUN wget "https://github.com/Livox-SDK/Livox-SDK2/archive/refs/tags/v1.2.5.zip" -O /tmp/livox_sdk.zip && \
-    unzip -o /tmp/livox_sdk.zip -d /tmp/livox_sdk_src && \
+COPY third_party_pkgs/livox_sdk_v1.2.5.zip /tmp/livox_sdk_v1.2.5.zip
+RUN unzip -o /tmp/livox_sdk_v1.2.5.zip -d /tmp/livox_sdk_src && \
     cd /tmp/livox_sdk_src/Livox-SDK2-1.2.5/ && \
     mkdir build && \
     cd build && \
     cmake .. && \
     make -j && \
     make install
+
+# nav2 requeriments
+RUN apt-get install -y \
+    ros-humble-robot-localization \
+    libtbb-dev \
+    libopenvdb-dev \
+    "ros-humble-navigation2*" \
+    "ros-humble-pointcloud-to-laserscan*" \
+    ros-humble-slam-toolbox \
+    ros-humble-spatio-temporal-voxel-layer \
+    "ros-humble-nav2-*" \
+    ros-humble-turtlebot3-gazebo \
+    libcgal-dev \
+    pcl-tools \
+    libxcb-cursor0 \
+    libxcb-shape0 \
+    libxcb-icccm4 \
+    libxcb-keysyms1 \
+    libxkbcommon-x11-0 \
+    xterm
 
 # copy files from host to container
 COPY configs/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
