@@ -4,6 +4,10 @@ FROM osrf/ros:humble-desktop-full@sha256:259c542d00f55e6380219c7ac0276eb12878ea7
 
 INCLUDE+ docker/Dockerfile.root.common
 
+# install packkages only available for amd64
+RUN apt-get install -y \
+    ros-humble-turtlebot3-gazebo
+
 # vscode server
 # RUN  curl -fOL https://github.com/coder/code-server/releases/download/v4.104.2/code-server_4.104.2_amd64.deb && \
 #     dpkg -i code-server_4.104.2_amd64.deb && \

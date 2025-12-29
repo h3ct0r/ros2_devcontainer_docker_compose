@@ -1,6 +1,7 @@
 # syntax = edrevo/dockerfile-plus
 
-FROM arm64v8/ros:noetic-perception-focal AS arm64_build_state
+FROM arm64v8/ros:humble-perception-jammy AS arm64_build_state
+
 
 INCLUDE+ docker/Dockerfile.root.common
 

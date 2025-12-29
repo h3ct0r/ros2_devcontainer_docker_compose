@@ -49,6 +49,9 @@
             },
             "runOptions": {
                 "runOn": "folderOpen"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws/"
             }
         },
         {
@@ -67,6 +70,9 @@
             },
             "runOptions": {
                 "runOn": "folderOpen"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/ros2_ws/"
             }
         },
         {
