@@ -139,6 +139,14 @@ RUN apt-get install -y \
     libxkbcommon-x11-0 \
     xterm
 
+# install dynamixel packages
+RUN apt-get install -y \
+    ros-humble-dynamixel-sdk \
+    ros-humble-dynamixel-sdk-custom-interfaces \
+    ros-humble-dynamixel-workbench \
+    ros-humble-dynamixel-workbench-msgs \
+    ros-humble-dynamixel-workbench-toolbox
+
 # copy files from host to container
 COPY configs/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY configs/supervisord/custom_programs.conf /etc/supervisor/conf.d/custom_programs.conf

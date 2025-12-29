@@ -24,4 +24,4 @@ RUN sed -i -e '/case $- in/,+3 s/^/#/g' /home/ubuntu/.bashrc
 # remove tmux stuff
 RUN sed -i -e '/TMUX/s/^/#/g' /home/ubuntu/.bashrc
 
-RUN pip install ros2_unbag
+RUN pip install ros2_unbag colcon-top-level-workspace
