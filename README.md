@@ -35,13 +35,13 @@ A  `development container` (or dev container for short) allows you to use a cont
 <summary> Recommended for local development, with X11 sharing, etc.</summary>
 
 - `git clone git@github.com:h3ct0r/ros2_devcontainer_docker_compose.git`
-- Verify the compose file used in the container used in `.devcontainer/devcontaoiner.json`, given your operative system:
+- Verify the compose file used in the container used in `.devcontainer/devcontainer.json`, given your operative system:
   ```json
   "dockerComposeFile": [
-        "../compose_linux_host.yaml"
+        "../compose_linux.yaml"
     ],
   ```
-  - Can also be `../compose_macos_host.yaml` if you use MacOS
+  - Can also be `../compose_macos.yaml` if you use MacOS
 - Open folder with VScode using the dev containers plugin (https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
   - `control + shift + p`
   - Write `Dev Containers: Reopen in Container` or  `Dev Containers: Rebuild and Reopen in Container`
@@ -60,8 +60,8 @@ A  `development container` (or dev container for short) allows you to use a cont
   <summary>Recommended for remote development, as for example, deploying a dev machine on the robot.</summary>
   
 - `git clone git@github.com:h3ct0r/ros2_devcontainer_docker_compose.git`
-- `cd ros1_devcontainer_docker_compose`
-- `BUILDKIT_PROGRESS=plain docker compose -f compose_jetson_host.yaml up --build`
+- `cd ros2_devcontainer_docker_compose`
+- `BUILDKIT_PROGRESS=plain docker compose -f compose_linux.yaml up --build`
 
 `BUILDKIT_PROGRESS=plain` helps to visualize step by step output of each of the commands.
 </details>

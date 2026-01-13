@@ -1,17 +1,19 @@
-# syntax = edrevo/dockerfile-plus
+FROM h3ct0rdcc/ros2_humble_development:amd64 AS amd64_build_state
 
-FROM osrf/ros:humble-desktop-full@sha256:259c542d00f55e6380219c7ac0276eb12878ea7c36a856d187dc3fea1b70a6ce AS amd64_build_state
+ENV DEBIAN_FRONTEND=noninteractive
+ENV USERNAME=ubuntu
+ENV PASSWD=ubuntu
+ENV ROS_DISTRO=humble
+ENV ROS_WORKSPACE=/home/${USERNAME}/ros2_ws
+ENV COLCON_HOME=/home/${USERNAME}/.colcon
+ENV AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS=1
 
-INCLUDE+ docker/Dockerfile.root.common
+COPY .devcontainer/onCreate.sh /onCreate.sh
+RUN sudo chmod +x /onCreate.sh
+COPY .devcontainer/postCreate.sh /postCreate.sh
+RUN sudo chmod +x /postCreate.sh
+COPY .devcontainer/postAttach.sh /postAttach.sh
+RUN sudo chmod +x /postAttach.sh
 
-# install packkages only available for amd64
-RUN apt-get install -y \
-    ros-humble-turtlebot3-gazebo
-
-# vscode server
-# RUN  curl -fOL https://github.com/coder/code-server/releases/download/v4.104.2/code-server_4.104.2_amd64.deb && \
-#     dpkg -i code-server_4.104.2_amd64.deb && \
-#     rm code-server_4.104.2_amd64.deb
-
-INCLUDE+ docker/Dockerfile.user.common
-INCLUDE+ docker/Dockerfile.entrypoint.common
+USER $USERNAME
+RUN pip install tqdm
