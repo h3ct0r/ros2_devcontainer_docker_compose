@@ -1,5 +1,10 @@
 .DS_Store
 
+# ROS workspace mounted into the container
+local_mount/.ccache/
+local_mount/install/
+local_mount/log/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

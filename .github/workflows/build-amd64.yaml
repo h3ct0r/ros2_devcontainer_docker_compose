@@ -8,13 +8,36 @@ on:
 jobs:
   build-and-test:
     runs-on: self-hosted
-    services:
-      docker:
-        image: docker:20.10.9
-        options: --privileged
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Build base and robot targets
+        run: docker buildx bake --load --set '*.platform=linux/amd64' base robot
+
+      - name: Test base image tools
+        run: |
+          docker run --rm h3ct0rdcc/ros2_humble_development:base bash -lc \
+            'ros2 pkg list > /dev/null && colcon --help > /dev/null && /home/ubuntu/.py3/bin/python -c "import open3d, rclpy" && zenoh-bridge-ros2dds --help > /dev/null'
+
+      - name: Test Zenoh between two containers
+        run: |
+          docker network create zenoh-ci
+          docker run -d --name zenoh-a --network zenoh-ci -e ROS_TRANSPORT=zenoh h3ct0rdcc/ros2_humble_development:base
+          docker run -d --name zenoh-b --network zenoh-ci -e ROS_TRANSPORT=zenoh -e ZENOH_CONNECT=tcp/zenoh-a:7447 h3ct0rdcc/ros2_humble_development:base
+          sleep 10
+          docker exec zenoh-a bash -lc 'timeout 60 ros2 topic echo --once /ci_ping std_msgs/msg/String' > echo.log &
+          sleep 5
+          docker exec zenoh-b bash -lc 'ros2 topic pub --times 20 --rate 2 /ci_ping std_msgs/msg/String "{data: zenoh-ok}"'
+          wait
+          cat echo.log
+          grep -q zenoh-ok echo.log
+
+      - name: Remove Zenoh test containers
+        if: always()
+        run: |
+          docker rm -f zenoh-a zenoh-b || true
+          docker network rm zenoh-ci || true
 
       - name: Build and start Docker Compose services
         run: docker compose -f compose_linux.yaml up -d --build
@@ -22,7 +45,7 @@ jobs:
       - name: Wait for services to be healthy (optional, but recommended)
         # You can use a dedicated action or a script to wait for health checks
         # Example using a simple sleep (adjust as needed for your application)
-        run: sleep 30 
+        run: sleep 30
 
       - name: Test noVNC is up
         run: |
@@ -78,4 +101,5 @@ jobs:
         run: docker ps -a
 
       - name: Stop and remove containers
+        if: always()
         run: docker compose -f compose_linux.yaml down

@@ -76,18 +76,18 @@
             }
         },
         {
-            "label": "roscore",
+            "label": "colcon build",
             "type": "shell",
-            "command": "bash -i -c roscore",
+            "command": "bash -i -c 'cd ~/ros2_ws && colcon build'",
             "presentation": {
                 "reveal": "always",
                 "panel": "new"
             }
         },
         {
-            "label": "rviz",
+            "label": "rviz2",
             "type": "shell",
-            "command": "bash -i -c 'rosrun rviz rviz'",
+            "command": "bash -i -c rviz2",
             "presentation": {
                 "reveal": "always",
                 "panel": "new"
