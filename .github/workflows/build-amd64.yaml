@@ -5,10 +5,10 @@ on:
     branches:
       - main
     paths:
-      - "configs"
-      - "docker"
-      - "local_mount"
-      - "third_party_pkgs"
+      - "configs/**"
+      - "docker/**"
+      - "local_mount/**"
+      - "third_party_pkgs/**"
 
 env:
   # Use docker.io for Docker Hub if empty
@@ -43,69 +43,97 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
-      #- name: Build and start Docker Compose services
-      #  run: docker compose -f compose_linux.yaml up -d --build
+      - name: Build base and robot targets
+        run: docker buildx bake --load --set '*.platform=linux/amd64' base robot
 
-      #- name: Wait for services to be healthy (optional, but recommended)
-      #  # You can use a dedicated action or a script to wait for health checks
-      #  # Example using a simple sleep (adjust as needed for your application)
-      #  run: sleep 30
+      - name: Test base image tools
+        run: |
+          docker run --rm h3ct0rdcc/ros2_humble_development:base bash -lc \
+            'ros2 pkg list > /dev/null && colcon --help > /dev/null && /home/ubuntu/.py3/bin/python -c "import open3d, rclpy" && zenoh-bridge-ros2dds --help > /dev/null'
 
-      #- name: Test noVNC is up
-      #  run: |
-      #    SERVICE_URL="http://localhost:3080"
-      #    EXPECTED_RESPONSE="200"
-      #    RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL)
-      #    if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
-      #        echo "Test Passed: Service returned expected response."
-      #        echo "Expected: $EXPECTED_RESPONSE"
-      #        echo "Actual: $RESPONSE"
-      #        exit 0
-      #    else
-      #        echo "Test Failed: Service response did not match expected response."
-      #        echo "Expected: $EXPECTED_RESPONSE"
-      #        echo "Actual: $RESPONSE"
-      #        exit 1
-      #    fi
+      - name: Test Zenoh between two containers
+        run: |
+          docker network create zenoh-ci
+          docker run -d --name zenoh-a --network zenoh-ci -e ROS_TRANSPORT=zenoh h3ct0rdcc/ros2_humble_development:base
+          docker run -d --name zenoh-b --network zenoh-ci -e ROS_TRANSPORT=zenoh -e ZENOH_CONNECT=tcp/zenoh-a:7447 h3ct0rdcc/ros2_humble_development:base
+          sleep 10
+          docker exec zenoh-a bash -lc 'timeout 60 ros2 topic echo --once /ci_ping std_msgs/msg/String' > echo.log &
+          sleep 5
+          docker exec zenoh-b bash -lc 'ros2 topic pub --times 20 --rate 2 /ci_ping std_msgs/msg/String "{data: zenoh-ok}"'
+          wait
+          cat echo.log
+          grep -q zenoh-ok echo.log
 
-      #- name: Test code-server is up
-      #  run: |
-      #    SERVICE_URL="http://localhost:3081"
-      #    EXPECTED_RESPONSE="200"
-      #    RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL)
-      #    if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
-      #        echo "Test Passed: Service returned expected response."
-      #        echo "Expected: $EXPECTED_RESPONSE"
-      #        echo "Actual: $RESPONSE"
-      #        exit 0
-      #    else
-      #        echo "Test Failed: Service response did not match expected response."
-      #        echo "Expected: $EXPECTED_RESPONSE"
-      #        echo "Actual: $RESPONSE"
-      #        exit 1
-      #    fi
+      - name: Remove Zenoh test containers
+        if: always()
+        run: |
+          docker rm -f zenoh-a zenoh-b || true
+          docker network rm zenoh-ci || true
 
-      #- name: Test sshd is up
-      #  run: |
-      #    EXPECTED_RESPONSE="1"
-      #    RESPONSE=$(netstat -an | grep 0.0.0.0:3022 | grep tcp | grep LISTEN | wc -l)
-      #    if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
-      #        echo "Test Passed: Service returned expected response."
-      #        echo "Expected: $EXPECTED_RESPONSE"
-      #        echo "Actual: $RESPONSE"
-      #        exit 0
-      #    else
-      #        echo "Test Failed: Service response did not match expected response."
-      #        echo "Expected: $EXPECTED_RESPONSE"
-      #        echo "Actual: $RESPONSE"
-      #        exit 1
-      #    fi
+      - name: Build and start Docker Compose services
+        run: docker compose -f compose_linux.yaml up -d --build
 
-      #- name: Check running containers (optional for debugging)
-      #  run: docker ps -a
+      - name: Wait for services to be healthy (optional, but recommended)
+        # You can use a dedicated action or a script to wait for health checks
+        # Example using a simple sleep (adjust as needed for your application)
+        run: sleep 30
 
-      #- name: Stop and remove containers
-      #  run: docker compose -f compose_linux.yaml down
+      - name: Test noVNC is up
+        run: |
+          SERVICE_URL="http://localhost:3080"
+          EXPECTED_RESPONSE="200"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL)
+          if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
+              echo "Test Passed: Service returned expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 0
+          else
+              echo "Test Failed: Service response did not match expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 1
+          fi
+
+      - name: Test code-server is up
+        run: |
+          SERVICE_URL="http://localhost:3081"
+          EXPECTED_RESPONSE="200"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL)
+          if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
+              echo "Test Passed: Service returned expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 0
+          else
+              echo "Test Failed: Service response did not match expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 1
+          fi
+
+      - name: Test sshd is up
+        run: |
+          EXPECTED_RESPONSE="1"
+          RESPONSE=$(netstat -an | grep 0.0.0.0:3022 | grep tcp | grep LISTEN | wc -l)
+          if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
+              echo "Test Passed: Service returned expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 0
+          else
+              echo "Test Failed: Service response did not match expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 1
+          fi
+
+      - name: Check running containers (optional for debugging)
+        run: docker ps -a
+
+      - name: Stop and remove containers
+        if: always()
+        run: docker compose -f compose_linux.yaml down
 
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
@@ -128,7 +156,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./docker/Dockerfile.amd64
+          file: ./docker/Dockerfile
+          target: full
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

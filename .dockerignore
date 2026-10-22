@@ -1,0 +1,8 @@
+# Only docker/, configs/ and third_party_pkgs/ are used by the build
+.git
+.github
+local_mount
+*.md
+compose*.yaml
+docker-bake.hcl
+.env*

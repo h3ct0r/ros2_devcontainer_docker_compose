@@ -1,42 +1,22 @@
+# Docker Desktop on macOS. Runs natively: arm64 on Apple Silicon, amd64 on Intel.
 services:
   ros2:
-    container_name: ros2_humble_development
-    image: h3ct0rdcc/ros2_humble_development
-    platform: linux/amd64
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.amd64
-      tags:
-        - "h3ct0rdcc/ros2_humble_development:amd64"
-    extra_hosts:
-      - "ros2_docker:127.0.0.1"
+    extends:
+      file: compose.common.yaml
+      service: ros2
     ipc: host
     pid: host
     privileged: true
     network_mode: bridge
     ports:
-      - "3080:3080"
-      - "3081:3081"
-      - "3022:3022"
-      - "5902:5902"
-    environment:
-      - DISPLAY=${DISPLAY:-:0}
-      - NVIDIA_DRIVER_CAPABILITIES=all
-      - TZ=${TZ:-UTC}
-      - DEBIAN_FRONTEND=noninteractive
-      - ROS_AUTOMATIC_DISCOVERY_RANGE=localhost
-      - DOCKER_DEFAULT_PLATFORM=linux/amd64
+      - "3080:3080"   # noVNC
+      - "3081:3081"   # code-server
+      - "3022:3022"   # ssh
+      - "5902:5902"   # VNC
+      - "7447:7447"   # Zenoh (ROS_TRANSPORT=zenoh or bridge)
     volumes:
-      - ./local_mount/:/home/ubuntu/ros2_ws
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
-      - /tmp/.X11-unix:/tmp/.X11-unix
       - /var/log/val_logger:/var/log/val_logger
     sysctls:
       - "net.ipv6.conf.all.disable_ipv6=1"
       - "net.ipv6.conf.default.disable_ipv6=1"
       - "net.ipv6.conf.lo.disable_ipv6=1"
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-      - SYS_PTRACE

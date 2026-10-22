@@ -1,37 +1,18 @@
+# Rootful Docker on Linux (workstation or robot): host network, full device access.
+#   docker compose -f compose_linux.yaml up -d
+#   TARGET=robot docker compose -f compose_linux.yaml up -d    # on the robot
 services:
   ros2:
-    container_name: ros2_humble_development
-    image: ros2_humble_development
-    platform: linux/amd64
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.amd64
-      tags:
-        - "h3ct0rdcc/ros2_humble_development:amd64"
-    hostname: ros2_docker
-    extra_hosts:
-      - "ros2_docker:127.0.0.1"
+    extends:
+      file: compose.common.yaml
+      service: ros2
     ipc: host
     pid: host
     privileged: true
     network_mode: host
-    environment:
-      - DISPLAY=${DISPLAY:-:0}
-      - NVIDIA_DRIVER_CAPABILITIES=all
-      - TZ=${TZ:-UTC}
-      - DEBIAN_FRONTEND=noninteractive
-      - ROS_AUTOMATIC_DISCOVERY_RANGE=localhost
-      - DOCKER_DEFAULT_PLATFORM=linux/amd64
     volumes:
-      - ./local_mount/:/home/ubuntu/ros2_ws
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
-      - /tmp/.X11-unix:/tmp/.X11-unix
       - /dev:/dev
+      - ${XAUTHORITY:-/dev/null}:/tmp/.host-xauthority:ro   # host X11 cookie (Wayland desktops)
     device_cgroup_rules:
       - "c 81:* rmw"
       - "c 189:* rmw"
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-      - SYS_PTRACE

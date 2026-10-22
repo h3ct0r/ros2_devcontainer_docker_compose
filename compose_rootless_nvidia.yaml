@@ -1,0 +1,18 @@
+# Rootless Docker on a Linux workstation with an NVIDIA GPU (needs nvidia-container-toolkit).
+# The GPU comes from the toolkit's CDI spec, so no daemon.json or no-cgroups changes.
+# GUI apps on a display the GPU doesn't drive (hybrid laptops, VNC) need prime-run;
+# see "NVIDIA GPU" in the README.
+services:
+  ros2:
+    extends:
+      file: compose_rootless.yaml
+      service: ros2
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              count: 1
