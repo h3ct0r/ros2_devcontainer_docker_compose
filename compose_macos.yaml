@@ -14,6 +14,10 @@ services:
       - "3022:3022"   # ssh
       - "5902:5902"   # VNC
       - "7447:7447"   # Zenoh (ROS_TRANSPORT=zenoh or bridge)
+    environment:
+      # GUI apps from code-server, ssh and docker exec open on the VNC desktop. The Mac's
+      # own DISPLAY (an XQuartz socket path) doesn't exist inside the container.
+      - DISPLAY=:2
     volumes:
       - /var/log/val_logger:/var/log/val_logger
     sysctls:
