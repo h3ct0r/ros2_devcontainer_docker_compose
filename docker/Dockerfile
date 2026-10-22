@@ -277,7 +277,17 @@ COPY configs/xfce/helpers.rc /etc/xdg/xfce4/helpers.rc
 # remove them. Edited as XML: deleting lines breaks the nesting and loses the dock.
 RUN python3 - <<'EOF'
 import os
+import shutil
 import xml.etree.ElementTree as ET
+
+
+def launchable(item):
+    # Without a browser the web browser launcher only opens an empty "preferred
+    # application" chooser
+    if item == "xfce4-web-browser.desktop" and not shutil.which("x-www-browser"):
+        return False
+    return os.path.exists(f"/usr/share/applications/{item}")
+
 
 path = "/etc/xdg/xfce4/panel/default.xml"
 tree = ET.parse(path)
@@ -286,7 +296,7 @@ dropped = set()
 for plugin in list(plugins):
     items = [v.get("value") for v in plugin.findall("property[@name='items']/value")]
     if not os.path.exists(f"/usr/share/xfce4/panel/plugins/{plugin.get('value')}.desktop") or (
-        items and not any(os.path.exists(f"/usr/share/applications/{i}") for i in items)
+        items and not any(launchable(i) for i in items)
     ):
         plugins.remove(plugin)
         dropped.add(plugin.get("name").removeprefix("plugin-"))
