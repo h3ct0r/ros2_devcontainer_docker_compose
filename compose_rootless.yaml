@@ -10,6 +10,8 @@ services:
       service: ros2
     user: root
     shm_size: 1gb
+    volumes:
+      - ${XAUTHORITY:-/dev/null}:/tmp/.host-xauthority:ro   # host X11 cookie (Wayland desktops)
     ports:
       - "3080:3080"   # noVNC
       - "3081:3081"   # code-server

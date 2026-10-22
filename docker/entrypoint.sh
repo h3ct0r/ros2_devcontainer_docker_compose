@@ -45,6 +45,17 @@ export DEV_USER DEV_HOME
 
 echo "${DEV_USER}:${DEV_PASSWORD:-ubuntu}" | as_root chpasswd
 
+# Host X11 cookie, mounted from $XAUTHORITY by the Linux compose files: apps reach the
+# host display without xhost, which XWayland (Wayland desktops) requires. Added for
+# $DISPLAY only, since the cookie matches any display and would shadow the VNC one.
+if [ -r /tmp/.host-xauthority ] && command -v xauth >/dev/null; then
+    cookie=$(xauth -f /tmp/.host-xauthority list 2>/dev/null | awk '$2 == "MIT-MAGIC-COOKIE-1" { print $3; exit }')
+    if [ -n "$cookie" ]; then
+        xauth -q -f "${DEV_HOME}/.Xauthority" add "${DISPLAY:-:0}" MIT-MAGIC-COOKIE-1 "$cookie" ||
+            echo "entrypoint: could not add the host X11 cookie" >&2
+    fi
+fi
+
 # ROS middleware. The Zenoh router and the DDS bridge both listen on TCP 7447,
 # so only one of them runs.
 as_root rm -f /etc/supervisor/conf.d/zenoh-router.conf /etc/supervisor/conf.d/zenoh-bridge.conf

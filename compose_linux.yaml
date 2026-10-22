@@ -12,6 +12,7 @@ services:
     network_mode: host
     volumes:
       - /dev:/dev
+      - ${XAUTHORITY:-/dev/null}:/tmp/.host-xauthority:ro   # host X11 cookie (Wayland desktops)
     device_cgroup_rules:
       - 'c 81:* rmw'
       - 'c 189:* rmw'

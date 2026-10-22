@@ -1,5 +1,8 @@
 # ROS 2 development shell, sourced from ~/.bashrc.
 
+# Rootless Docker starts `docker exec` sessions with umask 0000 (world-writable files)
+[ "$(umask)" = 0000 ] && umask 022
+
 # Values resolved at container start by /entrypoint.sh (middleware, domain, Zenoh).
 # They only fill in what is not already set, so an explicit export still wins.
 if [ -r /etc/ros_dev.env ]; then

@@ -60,6 +60,7 @@ For a complete tutorial on how to use this repo using devcontainers VScode check
 | Linux with NVIDIA GPU | `docker compose -f compose_linux_nvidia.yaml up -d` |
 | macOS (Docker Desktop) | `docker compose -f compose_macos.yaml up -d` |
 | Linux, rootless Docker/Podman | `docker compose -f compose_rootless.yaml up -d` |
+| Linux with NVIDIA GPU, rootless Docker | `docker compose -f compose_rootless_nvidia.yaml up -d` |
 | Robot, rootless Docker | `docker compose -f compose_rootless_robot.yaml up -d` |
 
 On the robot, use the lean headless target: `TARGET=robot docker compose -f compose_linux.yaml up -d`.
@@ -82,7 +83,7 @@ Passwords are set when the container starts, from `DEV_PASSWORD` (ssh, default `
 
 `compose_linux_nvidia.yaml` needs the NVIDIA driver and `nvidia-container-toolkit` on the host.
 
-- **Host display.** Run `xhost +SI:localuser:$(whoami)` on the host once per login, then start apps with `DISPLAY=:0`. If the desktop runs on an integrated GPU, as on most laptops, start them with `prime-run` (`DISPLAY=:0 prime-run rviz2`); otherwise they fall back to software rendering.
+- **Host display.** Start apps with `DISPLAY=:0`. The Linux compose files hand your X11 cookie (`$XAUTHORITY`) to the container, so no `xhost` changes are needed; recreate the container after you log in again. If the desktop runs on an integrated GPU, as on most laptops, start them with `prime-run` (`DISPLAY=:0 prime-run rviz2`); otherwise they fall back to software rendering.
 - **VNC.** Apps in VNC render in software (llvmpipe). `prime-run` puts them on the GPU, but every frame is copied back to the VNC server, which caps them at about 30 FPS at 1920x1080. Use it for heavy scenes only.
 - **Headless rendering and CUDA.** Gazebo cameras and GPU lidars without a display, and CUDA in Open3D, use the GPU without `prime-run`.
 
@@ -109,11 +110,13 @@ ROS_TRANSPORT=zenoh ZENOH_CONNECT=tcp/<robot-ip>:7447 docker compose -f compose_
 
 ### Rootless Docker
 
-Set up rootless Docker with `dockerd-rootless-setuptool.sh install` (see the [Docker docs](https://docs.docker.com/engine/security/rootless/)), then use `compose_rootless.yaml` or `compose_rootless_robot.yaml`.
+Set up rootless Docker with `dockerd-rootless-setuptool.sh install` (see the [Docker docs](https://docs.docker.com/engine/security/rootless/)), then use `compose_rootless.yaml`, `compose_rootless_nvidia.yaml` or `compose_rootless_robot.yaml`.
 
 - **Files stay yours.** In rootless mode the container's root user is your host user. The entrypoint detects rootless Docker (a user namespace, plus a workspace owned by container root) and runs the session as `root`, with `/home/ubuntu` as its home. Files written to `local_mount/` are then owned by you on the host. Log in over SSH as `root` with `DEV_PASSWORD`. Set `ROOTLESS=1` or `ROOTLESS=0` to override the detection.
 - **Devices.** Host groups such as `dialout` don't reach a rootless container. Install [configs/udev/99-ros-dev.rules](configs/udev/99-ros-dev.rules) on the host for serial adapters (Dynamixel) and RealSense cameras.
-- **Network.** In rootless Docker, `network_mode: host` reaches the real host network only on Engine 29.5 or newer. That's what `compose_rootless_robot.yaml` needs for DDS discovery and SocketCAN. On older engines use `compose_rootless.yaml` with `ROS_TRANSPORT=zenoh` or `bridge`.
+- **Network.** In rootless Docker, `network_mode: host` reaches the real host network only on Engine 29.5 or newer. That's what `compose_rootless_robot.yaml` needs for DDS discovery and SocketCAN; other containers on that host that talk DDS to it need `ipc: host` too, or Fast DDS's shared-memory transport drops their traffic. On older engines use `compose_rootless.yaml` with `ROS_TRANSPORT=zenoh` or `bridge`.
+- **NVIDIA.** `compose_rootless_nvidia.yaml` gets the GPU from the CDI spec that `nvidia-container-toolkit` generates, so it needs no `daemon.json` or `no-cgroups` changes.
+- **umask.** Rootless Docker starts `docker exec` processes with umask 0000. Shells reset it to 022, but other exec'd processes, such as a Dev Containers server, create world-writable files.
 - **Dev Containers.** Set `"remoteUser": "root"` in `devcontainer.json`.
 - **Podman.** Rootless Podman works the same way. Alternatively, `--userns=keep-id:uid=1000,gid=1000` maps your user to `ubuntu`.
 
