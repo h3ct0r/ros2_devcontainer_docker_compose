@@ -15,9 +15,11 @@ ARG TARGETARCH
 
 # zenoh-bridge-ros2dds standalone release, pinned per architecture.
 # Bumping the version means updating both checksums (GitHub release asset digests).
-ARG ZENOH_BRIDGE_VERSION=1.10.1
-ARG ZENOH_BRIDGE_SHA256_AMD64=f3ea8ac4345be22716925269bfd3e350e7cb36a8f056e835468c8299341d29b0
-ARG ZENOH_BRIDGE_SHA256_ARM64=fdb64d942d4b6beccbe9b1f8a359a01a2fca95a023c27535bf97b233603fad5f
+# 1.10.x amd64 builds need glibc 2.38 (Ubuntu 22.04 has 2.35): check a new version with
+# `objdump -T zenoh-bridge-ros2dds | grep GLIBC_` before bumping.
+ARG ZENOH_BRIDGE_VERSION=1.9.0
+ARG ZENOH_BRIDGE_SHA256_AMD64=91aa0d569fffd57e7ebb1a591b97789891c543b1ff0a1658413ce6cbbba34a9e
+ARG ZENOH_BRIDGE_SHA256_ARM64=e3eb1fd4459e4b877653419b1c25eaf92418d70fe53ee767eca005f1a19443dc
 
 # code-server .deb, pinned the same way
 ARG CODE_SERVER_VERSION=4.104.2
@@ -124,6 +126,7 @@ RUN --mount=type=cache,id=apt-cache-${TARGETARCH},target=/var/cache/apt,sharing=
     python3-rosdep \
     python3-vcstool \
     libgl1 \
+    libegl1 \
     libgomp1 \
     ros-humble-ament-lint-auto \
     ros-humble-ament-lint-common \
@@ -266,12 +269,33 @@ RUN ln -s vnc.html /usr/lib/novnc/index.html \
     && sed -i "s/UI.initSetting('resize', 'off');/UI.initSetting('resize', 'remote');/g" /usr/lib/novnc/app/ui.js
 
 COPY configs/supervisord/desktop.conf /etc/supervisor/conf.d/desktop.conf
-COPY --chmod=755 configs/vnc/vnc_run.sh configs/vnc/code_server_run.sh /usr/local/bin/
+COPY --chmod=755 configs/vnc/vnc_run.sh configs/vnc/code_server_run.sh configs/nvidia/prime-run /usr/local/bin/
 COPY configs/xfce/xfce4_defaults /usr/share/xfwm4/defaults
 COPY configs/xfce/helpers.rc /etc/xdg/xfce4/helpers.rc
 
-# Panel: drop plugins that are not installed, so XFCE does not ask to remove them
-RUN sed -i -E '/power-manager-plugin|pulseaudio|notification-plugin|statusnotifier/d' /etc/xdg/xfce4/panel/default.xml
+# Panel: drop plugins and launchers that are not installed, so XFCE does not ask to
+# remove them. Edited as XML: deleting lines breaks the nesting and loses the dock.
+RUN python3 - <<'EOF'
+import os
+import xml.etree.ElementTree as ET
+
+path = "/etc/xdg/xfce4/panel/default.xml"
+tree = ET.parse(path)
+plugins = tree.find("property[@name='plugins']")
+dropped = set()
+for plugin in list(plugins):
+    items = [v.get("value") for v in plugin.findall("property[@name='items']/value")]
+    if not os.path.exists(f"/usr/share/xfce4/panel/plugins/{plugin.get('value')}.desktop") or (
+        items and not any(os.path.exists(f"/usr/share/applications/{i}") for i in items)
+    ):
+        plugins.remove(plugin)
+        dropped.add(plugin.get("name").removeprefix("plugin-"))
+for ids in tree.iterfind("property[@name='panels']/property/property[@name='plugin-ids']"):
+    for value in list(ids):
+        if value.get("value") in dropped:
+            ids.remove(value)
+tree.write(path, encoding="UTF-8", xml_declaration=True)
+EOF
 
 USER ${USERNAME}
 

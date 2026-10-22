@@ -28,12 +28,12 @@ One Dockerfile ([docker/Dockerfile](docker/Dockerfile)) builds four stacked targ
 |---|---|---|---|
 | `base` | ROS 2 base, build/debug tools (colcon, rosdep, gdb, ccache), ssh, Zenoh, Python venv `~/.py3` | headless development, CI | 1.22 / 0.78 GB |
 | `robot` | + perception, RealSense, Livox SDK2, Dynamixel, CAN, Nav2, SLAM toolbox, robot_localization | running on the robot (SSH / VS Code Remote-SSH) | 2.02 / 1.54 GB |
-| `desktop` | + rviz2/rqt, lean XFCE desktop over VNC/noVNC, code-server | development with a GUI | 2.26 / 1.79 GB |
-| `full` | + `ros-humble-desktop-full`, Gazebo (ros_gz), TurtleBot3 | everything, the default | 2.51 / 1.92 GB |
+| `desktop` | + rviz2/rqt, lean XFCE desktop over VNC/noVNC, code-server | development with a GUI | 2.27 / 1.79 GB |
+| `full` | + `ros-humble-desktop-full`, Gazebo (ros_gz), TurtleBot3 | everything, the default | 2.52 / 1.92 GB |
 
 Choose one with `TARGET=<target>` in front of the compose command, or in a `.env` file (see [.env.example](.env.example)).
 
-For reference, the previous single image was 3.53 GB compressed (amd64), even without Open3D and Zenoh.
+For reference, the previous single image was 3.53 GB compressed and 13.7 GB unpacked (amd64), even without Open3D and Zenoh; `full` is 10.9 GB unpacked.
 
 The Python venv (Open3D, ros2_unbag with PySide6, SciPy) is about 2.1 GB unpacked on amd64, and it's in every target.
 
@@ -78,6 +78,14 @@ Once the container is up, the you can access the services via:
 
 Passwords are set when the container starts, from `DEV_PASSWORD` (ssh, default `ubuntu`), `VNC_PASSWORD` and `CODE_SERVER_PASSWORD`. When the VNC and code-server passwords are empty, those services are open. Set them when the robot is on a shared network.
 
+### NVIDIA GPU
+
+`compose_linux_nvidia.yaml` needs the NVIDIA driver and `nvidia-container-toolkit` on the host.
+
+- **Host display.** Run `xhost +SI:localuser:$(whoami)` on the host once per login, then start apps with `DISPLAY=:0`. If the desktop runs on an integrated GPU, as on most laptops, start them with `prime-run` (`DISPLAY=:0 prime-run rviz2`); otherwise they fall back to software rendering.
+- **VNC.** Apps in VNC render in software (llvmpipe). `prime-run` puts them on the GPU, but every frame is copied back to the VNC server, which caps them at about 30 FPS at 1920x1080. Use it for heavy scenes only.
+- **Headless rendering and CUDA.** Gazebo cameras and GPU lidars without a display, and CUDA in Open3D, use the GPU without `prime-run`.
+
 ### Zenoh
 
 Zenoh is off by default. `ROS_TRANSPORT` picks the middleware when the container starts:
@@ -95,7 +103,7 @@ ROS_TRANSPORT=zenoh ZENOH_CONNECT=tcp/<robot-ip>:7447 docker compose -f compose_
 ```
 
 - `ZENOH_CONNECT` takes a comma-separated list of endpoints.
-- With `bridge`, `ZENOH_NAMESPACE=/bot1` on a robot prefixes everything it publishes, which keeps several robots apart.
+- With `bridge`, `ZENOH_NAMESPACE=/bot1` on a robot prefixes everything it publishes, which keeps several robots apart. Other machines see its topics as `/bot1/...` and reach it the same way: `/bot1/cmd_vel` on the laptop is `/cmd_vel` on the robot.
 - Only one outbound TCP connection is needed, so this works through NAT, Docker bridge networks and rootless Docker, where DDS multicast does not.
 - The chosen middleware is applied to every shell: SSH, VNC terminals, code-server and `docker exec`.
 

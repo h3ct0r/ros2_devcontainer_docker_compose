@@ -1,0 +1,6 @@
+#!/bin/sh
+# Runs an OpenGL/Vulkan app on the NVIDIA GPU when the X display belongs to another GPU:
+# the host desktop on hybrid laptops, or the VNC desktop. Needs compose_linux_nvidia.yaml.
+#   DISPLAY=:0 prime-run rviz2
+export __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only __GLX_VENDOR_LIBRARY_NAME=nvidia
+exec "$@"

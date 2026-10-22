@@ -17,6 +17,10 @@ source "/opt/ros/${ROS_DISTRO}/setup.bash"
 [ -f /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash ] && source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash
 export _colcon_cd_root="${ROS_WORKSPACE}"
 
+# Gazebo Classic (full target): its own models and plugins. Without them gzserver looks
+# up model://sun in the online model database and stalls at startup.
+[ -f /usr/share/gazebo/setup.sh ] && source /usr/share/gazebo/setup.sh
+
 # Python venv created with --system-site-packages, so apt and ROS modules stay visible
 [ -f /home/ubuntu/.py3/bin/activate ] && source /home/ubuntu/.py3/bin/activate
 export PATH="${HOME}/.local/bin:${PATH}"
