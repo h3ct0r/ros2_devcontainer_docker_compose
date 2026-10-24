@@ -11,7 +11,9 @@ if [ -r /etc/ros_dev.env ]; then
     done < /etc/ros_dev.env
     unset _key _value
 fi
-export ROS_DISTRO=${ROS_DISTRO:-humble}
+# Distros after Humble warn about (Jazzy) or ignore (Lyrical) the old discovery variable
+[ "${ROS_DISTRO}" != humble ] && unset ROS_LOCALHOST_ONLY
+export ROS_DISTRO=${ROS_DISTRO:-jazzy}
 export ROS_WORKSPACE=${ROS_WORKSPACE:-/home/ubuntu/ros2_ws}
 
 source "/opt/ros/${ROS_DISTRO}/setup.bash"
@@ -28,8 +30,8 @@ export _colcon_cd_root="${ROS_WORKSPACE}"
 [ -f /home/ubuntu/.py3/bin/activate ] && source /home/ubuntu/.py3/bin/activate
 export PATH="${HOME}/.local/bin:${PATH}"
 
-# Compiler cache kept in the mounted workspace, so it survives container rebuilds
-export CCACHE_DIR="${ROS_WORKSPACE}/.ccache"
+# Compiler cache in its own per-distro volume (see compose.yaml), so it survives rebuilds
+export CCACHE_DIR=/home/ubuntu/.cache/ccache
 
 # History kept in the mounted workspace
 HISTFILE="${ROS_WORKSPACE}/.bash_history"

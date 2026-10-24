@@ -11,7 +11,7 @@ done
 if [ -n "${ZENOH_NAMESPACE}" ]; then
     args+=(--namespace "${ZENOH_NAMESPACE}")
 fi
-if [ "${ROS_LOCALHOST_ONLY:-0}" = 1 ]; then
+if [ "${ROS_DISCOVERY:-subnet}" = localhost ]; then
     args+=(--ros-localhost-only)
 fi
 

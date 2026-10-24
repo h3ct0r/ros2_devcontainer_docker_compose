@@ -5,7 +5,7 @@
 #   2. applies runtime settings: passwords and the ROS middleware (ROS_TRANSPORT)
 #   3. runs the command with ROS sourced, from the workspace
 
-ROS_DISTRO=${ROS_DISTRO:-humble}
+ROS_DISTRO=${ROS_DISTRO:?ROS_DISTRO is set by the image}
 ROS_WORKSPACE=${ROS_WORKSPACE:-/home/ubuntu/ros2_ws}
 DEV_HOME=/home/ubuntu
 
@@ -76,11 +76,37 @@ case "${ROS_TRANSPORT:=dds}" in
 esac
 export ROS_TRANSPORT
 
+# Discovery range, ROS_DISCOVERY=subnet|localhost. Humble reads ROS_LOCALHOST_ONLY; later
+# distros read ROS_AUTOMATIC_DISCOVERY_RANGE (Jazzy warns about the old variable and
+# Lyrical ignores it), so only the variable this distro understands gets set.
+if [ -z "${ROS_DISCOVERY}" ]; then
+    if [ "${ROS_LOCALHOST_ONLY}" = 1 ] || [ "${ROS_AUTOMATIC_DISCOVERY_RANGE}" = LOCALHOST ]; then
+        ROS_DISCOVERY=localhost
+    else
+        ROS_DISCOVERY=subnet
+    fi
+fi
+case "${ROS_DISCOVERY}" in
+    localhost | subnet) ;;
+    *)
+        echo "entrypoint: unknown ROS_DISCOVERY='${ROS_DISCOVERY}' (use subnet or localhost)" >&2
+        exit 1
+        ;;
+esac
+unset ROS_LOCALHOST_ONLY ROS_AUTOMATIC_DISCOVERY_RANGE
+if [ "${ROS_DISTRO}" != humble ]; then
+    export ROS_AUTOMATIC_DISCOVERY_RANGE="${ROS_DISCOVERY^^}"
+elif [ "${ROS_DISCOVERY}" = localhost ]; then
+    export ROS_LOCALHOST_ONLY=1
+fi
+export ROS_DISCOVERY
+
 # SSH sessions do not inherit the container environment: keep the resolved
 # values in a file that /etc/ros_dev.bashrc loads.
 {
-    for var in ROS_DISTRO ROS_WORKSPACE COLCON_HOME ROS_DOMAIN_ID ROS_LOCALHOST_ONLY RMW_IMPLEMENTATION \
-        ROS_TRANSPORT ZENOH_CONNECT ZENOH_NAMESPACE ZENOH_CONFIG_OVERRIDE TZ; do
+    for var in ROS_DISTRO ROS_WORKSPACE COLCON_HOME ROS_DOMAIN_ID ROS_DISCOVERY ROS_LOCALHOST_ONLY \
+        ROS_AUTOMATIC_DISCOVERY_RANGE RMW_IMPLEMENTATION ROS_TRANSPORT ZENOH_CONNECT ZENOH_NAMESPACE \
+        ZENOH_CONFIG_OVERRIDE TZ; do
         if [ -n "${!var}" ]; then printf '%s=%q\n' "$var" "${!var}"; fi
     done
 } | as_root tee /etc/ros_dev.env >/dev/null

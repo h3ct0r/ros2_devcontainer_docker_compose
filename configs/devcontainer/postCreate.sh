@@ -15,7 +15,7 @@ sudo chown -R "$(id -u):$(id -g)" /home/ubuntu/ros2_ws
 cd /home/ubuntu/ros2_ws/
 
 sudo apt-get update
-rosdep install --from-paths /home/ubuntu/ros2_ws/src --ignore-src --rosdistro humble -y
+rosdep install --from-paths /home/ubuntu/ros2_ws/src --ignore-src --rosdistro "${ROS_DISTRO}" -y
 
 # symlink-install, Release and ccache come from ~/.colcon/defaults.yaml
 MAKEFLAGS="-j6" colcon build
