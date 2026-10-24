@@ -19,15 +19,21 @@ env:
 
 jobs:
   build-and-test:
-    runs-on: self-hosted
-    #runs-on: ubuntu-latest
-    services:
-      docker:
-        image: docker:20.10.9
-        options: --privileged
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # The ROS images need far more disk than the hosted runner has free by default
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          docker image prune --all --force
+          df -h /
 
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
@@ -115,7 +121,7 @@ jobs:
       - name: Test sshd is up
         run: |
           EXPECTED_RESPONSE="1"
-          RESPONSE=$(netstat -an | grep 0.0.0.0:3022 | grep tcp | grep LISTEN | wc -l)
+          RESPONSE=$(ss -ltn | grep '0.0.0.0:3022 ' | wc -l)
           if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
               echo "Test Passed: Service returned expected response."
               echo "Expected: $EXPECTED_RESPONSE"
