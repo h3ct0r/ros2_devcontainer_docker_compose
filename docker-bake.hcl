@@ -24,6 +24,11 @@ variable "CACHE" {
   default = ""
 }
 
+# CI pushes each architecture by digest and creates the tags in a later step
+variable "NO_TAGS" {
+  default = ""
+}
+
 # Official multi-arch ROS bases, pinned by digest
 function "base_image" {
   params = [distro]
@@ -80,7 +85,7 @@ target "image" {
     ROS_DISTRO = distro
     BASE_IMAGE = base_image(distro)
   }
-  tags       = tags(distro, tgt)
+  tags       = NO_TAGS != "" ? [] : tags(distro, tgt)
   cache-from = ["type=registry,ref=${IMAGE}:buildcache-${distro}-${tgt}"]
   cache-to   = CACHE != "" ? ["type=registry,ref=${IMAGE}:buildcache-${distro}-${tgt},mode=max"] : []
 }

@@ -1,0 +1,242 @@
+name: Images
+
+# Builds and tests every distro natively on GitHub's amd64 and arm64 runners. On main,
+# each job also pushes its images by digest, and the publish job joins them into the
+# multi-arch tags on Docker Hub and GHCR (the same tags docker-bake.hcl defines).
+# Needs the repository secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN to publish.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "configs/**"
+      - "docker/**"
+      - "third_party_pkgs/**"
+      - "compose.yaml"
+      - "compose/**"
+      - "dev.sh"
+      - "docker-bake.hcl"
+      - ".github/workflows/ci.yml"
+  # Pull requests build and test, but publish nothing
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "configs/**"
+      - "docker/**"
+      - "third_party_pkgs/**"
+      - "compose.yaml"
+      - "compose/**"
+      - "dev.sh"
+      - "docker-bake.hcl"
+      - ".github/workflows/ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOCKERHUB_IMAGE: docker.io/h3ct0rdcc/ros2_dev
+  GHCR_IMAGE: ghcr.io/h3ct0r/ros2_dev
+  LEGACY_IMAGE: docker.io/h3ct0rdcc/ros2_humble_development
+  PUBLISH: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+
+jobs:
+  build:
+    name: ${{ matrix.distro }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: [humble, jazzy, lyrical]
+        arch: [amd64, arm64]
+    env:
+      DISTRO: ${{ matrix.distro }}
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # The ROS images need far more disk than the hosted runner has free by default
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache /usr/local/share/boost
+          docker image prune --all --force
+          df -h /
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log into Docker Hub
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log into GHCR
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build all targets
+        run: |
+          docker buildx bake --set "*.platform=linux/$ARCH" \
+            --set "*.cache-from=type=registry,ref=$DOCKERHUB_IMAGE:buildcache-$DISTRO-$ARCH" \
+            "$DISTRO-base" "$DISTRO-robot" "$DISTRO-desktop" "$DISTRO-full"
+
+      - name: Load the test images
+        run: docker buildx bake --load --set "*.platform=linux/$ARCH" "$DISTRO-base" "$DISTRO-desktop"
+
+      - name: Test base image tools
+        run: |
+          docker run --rm "h3ct0rdcc/ros2_dev:$DISTRO-base" bash -lc \
+            'ros2 pkg list > /dev/null && colcon --help > /dev/null && /home/ubuntu/.py3/bin/python -c "import open3d, rclpy" && zenoh-bridge-ros2dds --help > /dev/null'
+          docker run --rm "h3ct0rdcc/ros2_dev:$DISTRO-desktop" bash -lc '/home/ubuntu/.py3/bin/python -c "import cv_bridge, open3d"'
+
+      - name: Test Zenoh between two containers
+        run: |
+          docker network create zenoh-ci
+          docker run -d --name zenoh-a --network zenoh-ci -e ROS_TRANSPORT=zenoh "h3ct0rdcc/ros2_dev:$DISTRO-base"
+          docker run -d --name zenoh-b --network zenoh-ci -e ROS_TRANSPORT=zenoh -e ZENOH_CONNECT=tcp/zenoh-a:7447 "h3ct0rdcc/ros2_dev:$DISTRO-base"
+          sleep 10
+          docker exec zenoh-a bash -lc 'timeout 60 ros2 topic echo --once /ci_ping std_msgs/msg/String' > echo.log &
+          sleep 5
+          docker exec zenoh-b bash -lc 'ros2 topic pub --times 20 --rate 2 /ci_ping std_msgs/msg/String "{data: zenoh-ok}"'
+          wait
+          cat echo.log
+          grep -q zenoh-ok echo.log
+
+      - name: Remove Zenoh test containers
+        if: always()
+        run: |
+          docker rm -f zenoh-a zenoh-b || true
+          docker network rm zenoh-ci || true
+
+      - name: Start the desktop container with dev.sh
+        run: ./dev.sh up --distro "$DISTRO" --target desktop
+
+      - name: Test the desktop services
+        run: |
+          for port in 3080 3081; do
+            for _ in $(seq 60); do
+              [ "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:$port")" = 200 ] && break
+              sleep 2
+            done
+            [ "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:$port")" = 200 ] || { echo "port $port is not up"; exit 1; }
+          done
+          ss -ltn | grep -q ':3022 ' || { echo "sshd is not listening on 3022"; exit 1; }
+
+      - name: Test the discovery variable for this distro
+        run: |
+          env_out=$(docker exec "ros2_dev_$DISTRO" bash -lc 'env | grep -E "^ROS_(LOCALHOST_ONLY|AUTOMATIC_DISCOVERY_RANGE)=" || true')
+          echo "$env_out"
+          if [ "$DISTRO" = humble ]; then
+            [ -z "$env_out" ]
+          else
+            [ "$env_out" = "ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET" ]
+          fi
+
+      - name: Container logs
+        if: failure()
+        run: ./dev.sh logs --distro "$DISTRO" & sleep 5; kill %1 || true
+
+      - name: Stop the desktop container
+        if: always()
+        run: ./dev.sh down --distro "$DISTRO" || true
+
+      - name: Push by digest
+        if: env.PUBLISH == 'true'
+        env:
+          NO_TAGS: "1"
+        run: |
+          docker buildx bake --set "*.platform=linux/$ARCH" \
+            --set "*.output=type=image,\"name=$DOCKERHUB_IMAGE,$GHCR_IMAGE\",push-by-digest=true,name-canonical=true,push=true" \
+            --set "*.cache-from=type=registry,ref=$DOCKERHUB_IMAGE:buildcache-$DISTRO-$ARCH" \
+            --set "$DISTRO-full.cache-to=type=registry,ref=$DOCKERHUB_IMAGE:buildcache-$DISTRO-$ARCH,mode=max" \
+            --metadata-file metadata.json \
+            "$DISTRO-base" "$DISTRO-robot" "$DISTRO-desktop" "$DISTRO-full"
+          mkdir -p digests
+          python3 - <<'EOF'
+          import json, os
+          metadata = json.load(open("metadata.json"))
+          for target, info in metadata.items():
+              with open(f"digests/{target}-{os.environ['ARCH']}", "w") as f:
+                  f.write(info["containerimage.digest"])
+          EOF
+          ls digests
+
+      - name: Upload digests
+        if: env.PUBLISH == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.distro }}-${{ matrix.arch }}
+          path: digests/*
+          retention-days: 1
+
+  publish:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digests-*
+          path: digests
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log into Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log into GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Same tags as docker-bake.hcl: <distro>-<target>, <distro> = full, latest = jazzy-full,
+      # and the old Humble tags on h3ct0rdcc/ros2_humble_development
+      - name: Create the multi-arch tags
+        run: |
+          for distro in humble jazzy lyrical; do
+            for target in base robot desktop full; do
+              tags=("$distro-$target")
+              if [ "$target" = full ]; then tags+=("$distro"); fi
+              if [ "$target" = full ] && [ "$distro" = jazzy ]; then tags+=(latest); fi
+              args=()
+              for tag in "${tags[@]}"; do args+=(-t "$DOCKERHUB_IMAGE:$tag" -t "$GHCR_IMAGE:$tag"); done
+              if [ "$distro" = humble ]; then
+                args+=(-t "$LEGACY_IMAGE:$target")
+                if [ "$target" = full ]; then args+=(-t "$LEGACY_IMAGE:latest"); fi
+              fi
+              docker buildx imagetools create "${args[@]}" \
+                "$DOCKERHUB_IMAGE@$(cat "digests/$distro-$target-amd64")" \
+                "$DOCKERHUB_IMAGE@$(cat "digests/$distro-$target-arm64")"
+            done
+          done
+          docker buildx imagetools create -t "$LEGACY_IMAGE:amd64" "$DOCKERHUB_IMAGE@$(cat digests/humble-full-amd64)"
+          docker buildx imagetools create -t "$LEGACY_IMAGE:arm64" "$DOCKERHUB_IMAGE@$(cat digests/humble-full-arm64)"
+
+      - name: Show the published default tag
+        run: docker buildx imagetools inspect "$DOCKERHUB_IMAGE:latest"
