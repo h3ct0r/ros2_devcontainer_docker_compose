@@ -9,6 +9,18 @@ on:
       - "docker/**"
       - "local_mount/**"
       - "third_party_pkgs/**"
+      - ".github/workflows/build-amd64.yaml"
+  # Pull requests run the tests but skip the GHCR push
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "configs/**"
+      - "docker/**"
+      - "local_mount/**"
+      - "third_party_pkgs/**"
+      - ".github/workflows/build-amd64.yaml"
+  workflow_dispatch:
 
 env:
   # Use docker.io for Docker Hub if empty
