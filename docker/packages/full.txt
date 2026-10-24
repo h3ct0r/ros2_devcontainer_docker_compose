@@ -1,0 +1,6 @@
+# full: simulation. ros_gz brings Gazebo Fortress (Humble), Harmonic (Jazzy) or Jetty (Lyrical)
+@desktop-full
+@ros-gz
+@turtlebot3-msgs
+ffmpeg
+pcl-tools

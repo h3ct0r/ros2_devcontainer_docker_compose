@@ -1,16 +1,19 @@
 # syntax=docker/dockerfile:1
 #
-# ROS 2 Humble development image for amd64 and arm64, built as stacked targets:
+# ROS 2 development image (Humble, Jazzy or Lyrical) for amd64 and arm64, built as
+# stacked targets:
 #
 #   base     headless dev tools, ssh, Zenoh, Python venv
 #   robot    base + robot drivers and navigation stack (deploy this on the robot)
 #   desktop  robot + rviz/rqt, lean XFCE over VNC/noVNC, code-server
-#   full     desktop + simulation (default)
+#   full     desktop + simulation
 #
-# Build with `docker buildx bake <target>` (see docker-bake.hcl) or through the
-# compose files, which select the target with TARGET=<target>.
+# ROS_DISTRO picks the distro; apt packages per stage live in docker/packages/.
+# Build with `docker buildx bake <distro>-<target>` (see docker-bake.hcl, which also
+# pins each base image by digest) or through compose / dev.sh.
 
-ARG ROS_BASE_IMAGE=ros:humble-ros-base-jammy@sha256:566b87e6dfc48392189a9c32e594e84060fa9948de93b04e536f39475a1f6963
+ARG ROS_DISTRO=jazzy
+ARG BASE_IMAGE=ros:${ROS_DISTRO}-ros-base
 ARG TARGETARCH
 
 # zenoh-bridge-ros2dds standalone release, pinned per architecture.
@@ -59,17 +62,21 @@ ADD --checksum=sha256:${CODE_SERVER_SHA256_ARM64} \
 FROM code-server-${TARGETARCH} AS code-server
 
 # Livox SDK2, built apart so only the installed files reach the robot target
-FROM ${ROS_BASE_IMAGE} AS livox-build
+FROM ${BASE_IMAGE} AS livox-build
 ARG MAKE_JOBS=4
 COPY third_party_pkgs/livox_sdk_v1.2.5.zip /tmp/livox_sdk.zip
+# GCC 13+ (Noble, Resolute) no longer pulls in <cstdint> transitively, and CMake 4
+# (Resolute) refuses the SDK's old cmake_minimum_required without a policy floor
 RUN python3 -m zipfile -e /tmp/livox_sdk.zip /tmp/livox_src \
     && cmake -S /tmp/livox_src/Livox-SDK2-1.2.5 -B /tmp/livox_build \
+        -DCMAKE_CXX_FLAGS="-include cstdint" -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     && make -C /tmp/livox_build -j"${MAKE_JOBS}" \
     && make -C /tmp/livox_build install DESTDIR=/out
 
 # ---------------------------------------------------------------------------
-FROM ${ROS_BASE_IMAGE} AS base
+FROM ${BASE_IMAGE} AS base
 ARG TARGETARCH
+ARG ROS_DISTRO
 ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
 
@@ -77,7 +84,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ENV DEBIAN_FRONTEND=noninteractive \
     USERNAME=ubuntu \
-    ROS_DISTRO=humble \
+    ROS_DISTRO=${ROS_DISTRO} \
     ROS_WORKSPACE=/home/ubuntu/ros2_ws \
     COLCON_HOME=/home/ubuntu/.colcon \
     AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS=1
@@ -87,59 +94,25 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN rm -f /etc/apt/apt.conf.d/docker-clean \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 
-RUN --mount=type=cache,id=apt-cache-${TARGETARCH},target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,id=apt-lists-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-    sudo \
-    gosu \
-    supervisor \
-    openssh-server \
-    openssh-client \
-    bash-completion \
-    less \
-    nano \
-    vim \
-    tmux \
-    htop \
-    tree \
-    unzip \
-    wget \
-    curl \
-    ca-certificates \
-    gnupg2 \
-    lsb-release \
-    locales \
-    tzdata \
-    iputils-ping \
-    iproute2 \
-    net-tools \
-    usbutils \
-    build-essential \
-    cmake \
-    gdb \
-    ccache \
-    git \
-    python3-pip \
-    python3-venv \
-    python3-argcomplete \
-    python3-colcon-common-extensions \
-    python3-rosdep \
-    python3-vcstool \
-    libgl1 \
-    libegl1 \
-    libgomp1 \
-    ros-humble-ament-lint-auto \
-    ros-humble-ament-lint-common \
-    ros-humble-rmw-cyclonedds-cpp \
-    ros-humble-rmw-zenoh-cpp
+RUN --mount=type=cache,id=apt-cache-${ROS_DISTRO}-${TARGETARCH},target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lists-${ROS_DISTRO}-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=bind,source=docker/packages,target=/tmp/packages \
+    /tmp/packages/install.sh base
 
 RUN --mount=type=bind,from=zenoh-bridge,source=/zenoh-bridge.zip,target=/tmp/zenoh-bridge.zip \
     unzip -q -o /tmp/zenoh-bridge.zip zenoh-bridge-ros2dds -d /usr/local/bin \
     && chmod 755 /usr/local/bin/zenoh-bridge-ros2dds
 
-# Dev user with passwordless sudo and access to serial, camera and USB devices
-RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
-    && useradd --uid "${USER_UID}" --gid "${USER_GID}" -m -s /bin/bash -G sudo,dialout,video,plugdev "${USERNAME}" \
+# Dev user with passwordless sudo and access to serial, camera and USB devices.
+# Ubuntu 24.04+ base images already have "ubuntu" (uid 1000): reuse it, adjusting ids.
+RUN if id -u "${USERNAME}" >/dev/null 2>&1; then \
+        groupmod --gid "${USER_GID}" "${USERNAME}" \
+        && usermod --uid "${USER_UID}" --gid "${USER_GID}" --shell /bin/bash "${USERNAME}"; \
+    else \
+        groupadd --gid "${USER_GID}" "${USERNAME}" \
+        && useradd --uid "${USER_UID}" --gid "${USER_GID}" -m -s /bin/bash "${USERNAME}"; \
+    fi \
+    && usermod -aG sudo,dialout,video,plugdev "${USERNAME}" \
     && echo "${USERNAME} ALL=(root) NOPASSWD:ALL" > "/etc/sudoers.d/${USERNAME}" \
     && chmod 0440 "/etc/sudoers.d/${USERNAME}"
 
@@ -166,19 +139,22 @@ COPY --chown=${USERNAME}:${USERNAME} configs/colcon/defaults.yaml /home/ubuntu/.
 RUN sed -i -e '/case $- in/,+3 s/^/#/g' /home/ubuntu/.bashrc \
     && echo 'source /etc/ros_dev.bashrc' >> /home/ubuntu/.bashrc \
     && touch /home/ubuntu/.Xauthority \
-    && mkdir -p "${ROS_WORKSPACE}/src" \
+    && mkdir -p "${ROS_WORKSPACE}/src" "${ROS_WORKSPACE}/build" "${ROS_WORKSPACE}/install" "${ROS_WORKSPACE}/log" \
+        /home/ubuntu/.cache/ccache \
     && rosdep update --rosdistro "${ROS_DISTRO}"
 
 # Python venv that still sees the apt and ROS Python packages (needed by colcon
-# and rosidl while the venv is active). Wheels are cached outside the image.
-RUN --mount=type=cache,id=pip-${TARGETARCH},target=/tmp/pip-cache,uid=${USER_UID},gid=${USER_GID} \
+# and rosidl while the venv is active). numpy stays on the system's major version:
+# ROS's compiled extensions (cv_bridge, ...) break across numpy 1 / 2. Wheels are
+# cached outside the image.
+RUN --mount=type=cache,id=pip-${ROS_DISTRO}-${TARGETARCH},target=/tmp/pip-cache,uid=${USER_UID},gid=${USER_GID} \
+    --mount=type=bind,source=docker/python,target=/tmp/python \
     python3 -m venv --system-site-packages /home/ubuntu/.py3 \
-    && PIP_CACHE_DIR=/tmp/pip-cache /home/ubuntu/.py3/bin/pip install \
-    ros2_unbag \
-    colcon-top-level-workspace \
-    pyserial \
-    open3d \
-    scipy
+    && numpy_major=$(python3 -c 'import numpy; print(numpy.__version__.split(".")[0])') \
+    && echo "numpy>=${numpy_major},<$((numpy_major + 1))" > /tmp/numpy-constraint.txt \
+    && PIP_CACHE_DIR=/tmp/pip-cache PIP_CONSTRAINT=/tmp/numpy-constraint.txt /home/ubuntu/.py3/bin/pip install \
+        -r /tmp/python/requirements.txt -r "/tmp/python/requirements.${ROS_DISTRO}.txt" \
+    && rm /tmp/numpy-constraint.txt
 
 WORKDIR ${ROS_WORKSPACE}
 ENTRYPOINT ["/entrypoint.sh"]
@@ -187,38 +163,13 @@ CMD ["sudo", "-E", "/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.co
 # ---------------------------------------------------------------------------
 FROM base AS robot
 ARG TARGETARCH
+ARG ROS_DISTRO
 USER root
 
-RUN --mount=type=cache,id=apt-cache-${TARGETARCH},target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,id=apt-lists-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-    ros-humble-perception \
-    ros-humble-librealsense2 \
-    ros-humble-realsense2-camera \
-    ros-humble-realsense2-camera-msgs \
-    ros-humble-realsense2-description \
-    ros-humble-dynamixel-sdk \
-    ros-humble-dynamixel-sdk-custom-interfaces \
-    ros-humble-dynamixel-workbench \
-    ros-humble-dynamixel-workbench-msgs \
-    ros-humble-dynamixel-workbench-toolbox \
-    ros-humble-can-msgs \
-    ros-humble-ros2-socketcan \
-    can-utils \
-    ros-humble-twist-mux \
-    ros-humble-teleop-twist-keyboard \
-    ros-humble-robot-localization \
-    ros-humble-slam-toolbox \
-    ros-humble-navigation2 \
-    ros-humble-nav2-bringup \
-    ros-humble-spatio-temporal-voxel-layer \
-    ros-humble-pointcloud-to-laserscan \
-    libtbb-dev \
-    libopenvdb-dev \
-    libcgal-dev \
-    libompl-dev \
-    libasio-dev \
-    libspdlog-dev
+RUN --mount=type=cache,id=apt-cache-${ROS_DISTRO}-${TARGETARCH},target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lists-${ROS_DISTRO}-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=bind,source=docker/packages,target=/tmp/packages \
+    /tmp/packages/install.sh robot
 
 COPY --from=livox-build /out/usr/local/ /usr/local/
 RUN ldconfig
@@ -228,37 +179,14 @@ USER ${USERNAME}
 # ---------------------------------------------------------------------------
 FROM robot AS desktop
 ARG TARGETARCH
+ARG ROS_DISTRO
 USER root
 
 # Lean XFCE (no goodies, no recommends) + TigerVNC + noVNC + rviz/rqt
-RUN --mount=type=cache,id=apt-cache-${TARGETARCH},target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,id=apt-lists-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-    ros-humble-desktop \
-    ros-humble-rqt-tf-tree \
-    ros-humble-nav2-rviz-plugins \
-    xfce4-session \
-    xfwm4 \
-    xfce4-panel \
-    xfdesktop4 \
-    xfce4-settings \
-    thunar \
-    greybird-gtk-theme \
-    elementary-xfce-icon-theme \
-    librsvg2-common \
-    dbus-x11 \
-    at-spi2-core \
-    terminator \
-    xterm \
-    tigervnc-standalone-server \
-    tigervnc-tools \
-    websockify \
-    mesa-utils \
-    libxcb-cursor0 \
-    libxcb-shape0 \
-    libxcb-icccm4 \
-    libxcb-keysyms1 \
-    libxkbcommon-x11-0
+RUN --mount=type=cache,id=apt-cache-${ROS_DISTRO}-${TARGETARCH},target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lists-${ROS_DISTRO}-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=bind,source=docker/packages,target=/tmp/packages \
+    /tmp/packages/install.sh desktop
 
 RUN --mount=type=bind,from=code-server,source=/code-server.deb,target=/tmp/code-server.deb \
     dpkg -i /tmp/code-server.deb
@@ -317,19 +245,13 @@ RUN cp /etc/xdg/xfce4/panel/default.xml /home/ubuntu/.config/xfce4/xfconf/xfce-p
 # ---------------------------------------------------------------------------
 FROM desktop AS full
 ARG TARGETARCH
+ARG ROS_DISTRO
 USER root
 
-# Simulation: Gazebo Fortress via ros_gz (packages.ros.org); TurtleBot3 Gazebo
-# Classic simulations only exist for amd64.
-RUN --mount=type=cache,id=apt-cache-${TARGETARCH},target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,id=apt-lists-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-    ros-humble-desktop-full \
-    ros-humble-ros-gz \
-    ros-humble-turtlebot3 \
-    ros-humble-turtlebot3-msgs \
-    $([ "${TARGETARCH}" = amd64 ] && echo ros-humble-turtlebot3-simulations) \
-    ffmpeg \
-    pcl-tools
+# Simulation: Gazebo through ros_gz (Fortress, Harmonic or Jetty, from packages.ros.org)
+RUN --mount=type=cache,id=apt-cache-${ROS_DISTRO}-${TARGETARCH},target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lists-${ROS_DISTRO}-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=bind,source=docker/packages,target=/tmp/packages \
+    /tmp/packages/install.sh full
 
 USER ${USERNAME}
