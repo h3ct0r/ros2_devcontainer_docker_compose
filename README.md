@@ -1,133 +1,181 @@
-# ros2_humble_docker_vnc_dev
-The sources of the base ROS2 Humble Docker image for development with devcontainers. It covers local development and testing on the robot: VNC and code-server in the browser, SSH, Zenoh, and rootless Docker support.
+# ros2_devcontainer_docker_compose
 
-<details>
-<summary> Details of the services in this container </summary>
+ROS 2 development containers for **Humble, Jazzy and Lyrical**, on amd64 and arm64:
+- a browser desktop (XFCE over noVNC);
+- code-server and SSH;
+- VS Code Dev Containers;
+- Zenoh;
+- rootless Docker.
 
-- ROS2 humble with a base workspace `/home/ubuntu/ros2_ws/`;
-- Native amd64 and arm64 (Jetson Orin Nano, Apple Silicon) images from one Dockerfile;
-- Support for NVIDIA Docker runtime for linux hosts;
-- VNC server that allows direct browser access (http://localhost:3080/), so nothing is required to install and use it;
-- A `ssh` server, to allow direct access from outside (`ssh ubuntu@localhost -p 3022`);
-- A web `vscode` server for easy remote access when deploying it on the robot (http://localhost:3081/);
-- Zenoh: `rmw_zenoh` and `zenoh-bridge-ros2dds`, switched on with one variable;
-- Rootless Docker/Podman support;
-- Fast rebuilds: `ccache` and `colcon` defaults (symlink install, Release, `compile_commands.json`);
-- Custom environment and VScode configurations:
-  - Open split terminals on launch;
-  - Setup all environments variables automatically for running ROS;
-  - Automatically open the VNC interface in a ROS tab;
-  - Custom PS1 (terminal shell);
-</details>
+They're meant for developing on a laptop and for early testing on the robot. Images are published as `h3ct0rdcc/ros2_dev:<distro>-<target>`.
 
-### Images
+## Quick start
 
-One Dockerfile ([docker/Dockerfile](docker/Dockerfile)) builds four stacked targets. Each one contains the previous one:
+```bash
+git clone git@github.com:h3ct0r/ros2_devcontainer_docker_compose.git
+cd ros2_devcontainer_docker_compose
+./dev.sh up                    # Jazzy desktop; ./dev.sh up --distro humble for another distro
+```
 
-| Target | Contents | Use it for | Compressed size amd64 / arm64 |
-|---|---|---|---|
-| `base` | ROS 2 base, build/debug tools (colcon, rosdep, gdb, ccache), ssh, Zenoh, Python venv `~/.py3` | headless development, CI | 1.22 / 0.78 GB |
-| `robot` | + perception, RealSense, Livox SDK2, Dynamixel, CAN, Nav2, SLAM toolbox, robot_localization | running on the robot (SSH / VS Code Remote-SSH) | 2.02 / 1.54 GB |
-| `desktop` | + rviz2/rqt, lean XFCE desktop over VNC/noVNC, code-server | development with a GUI | 2.27 / 1.79 GB |
-| `full` | + `ros-humble-desktop-full`, Gazebo (ros_gz), TurtleBot3 | everything, the default | 2.52 / 1.92 GB |
+`./dev.sh up` prints where to connect:
+- the desktop at http://localhost:3080/?autoconnect=true;
+- code-server at http://localhost:3081;
+- SSH with `ssh -p 3022 ubuntu@localhost` (password `ubuntu`).
 
-Choose one with `TARGET=<target>` in front of the compose command, or in a `.env` file (see [.env.example](.env.example)).
+`./dev.sh shell` opens a terminal in the container.
 
-For reference, the previous single image was 3.53 GB compressed and 13.7 GB unpacked (amd64), even without Open3D and Zenoh; `full` is 10.9 GB unpacked.
+Your code goes in `local_mount/src`, which the container sees as `~/ros2_ws/src`.
 
-The Python venv (Open3D, ros2_unbag with PySide6, SciPy) is about 2.1 GB unpacked on amd64, and it's in every target.
+**VS Code:** open this folder, run "Dev Containers: Reopen in Container", and pick **ROS 2 Humble**, **ROS 2 Jazzy** or **ROS 2 Lyrical**.
 
-### Dev Containers
+## Choosing the distro, image and host setup
 
-For a complete tutorial on how to use this repo using devcontainers VScode check: 
-- https://github.com/h3ct0r/ros2_devcontainer_docker_compose
+Settings live in `.env`; copy [.env.example](.env.example) to start, and `./dev.sh` creates it if missing. A variable in your shell overrides `.env`, and a `./dev.sh` option overrides both. The host settings default to `auto`, and any other value wins over the detection.
 
-### Headless run with `docker compose`
+| Setting | Values | `auto` picks |
+|---|---|---|
+| `ROS_DISTRO` | humble, jazzy, lyrical | – (default `jazzy`; in VS Code the config you open decides) |
+| `TARGET` | base, robot, desktop, full | – (default `desktop`) |
+| `GPU` | auto, none, nvidia, jetson | `nvidia` if Docker has the NVIDIA runtime or an NVIDIA CDI spec, `jetson` on a Jetson, otherwise `none` |
+| `MODE` | auto, rootful, rootless | whichever kind of Docker is running |
+| `NETWORK` | auto, host, bridge | `host` on Linux, `bridge` with published ports on macOS and on rootless Docker older than 29.5 |
+| `DEVICES` | auto, none, all | `all` (`/dev`, privileged) on rootful Linux, `none` on macOS and rootless |
+| `PLATFORM` | native, linux/amd64, linux/arm64 | `native`; the other one runs emulated |
 
-<details>
-  <summary>Recommended for remote development, as for example, deploying a dev machine on the robot.</summary>
-  
-- `git clone git@github.com:h3ct0r/ros2_humble_docker_vnc_dev.git`
-- `cd ros2_humble_docker_vnc_dev`
-- `BUILDKIT_PROGRESS=plain docker compose -f compose_linux.yaml up --build`
+```bash
+./dev.sh status                          # what each setting resolved to, and why
+GPU=none ./dev.sh up                     # NVIDIA machine, but test without the GPU
+./dev.sh up --distro lyrical --target full
+TARGET=robot MODE=rootless DEVICES=all ./dev.sh up   # Jetson robot, rootless, headless
+```
 
-`BUILDKIT_PROGRESS=plain` helps to visualize step by step output of each of the commands.
-</details>
-
-| Host | Command |
+| Command | Does |
 |---|---|
-| Linux (workstation or robot, rootful Docker) | `docker compose -f compose_linux.yaml up -d` |
-| Linux with NVIDIA GPU | `docker compose -f compose_linux_nvidia.yaml up -d` |
-| macOS (Docker Desktop) | `docker compose -f compose_macos.yaml up -d` |
-| Linux, rootless Docker/Podman | `docker compose -f compose_rootless.yaml up -d` |
-| Linux with NVIDIA GPU, rootless Docker | `docker compose -f compose_rootless_nvidia.yaml up -d` |
-| Robot, rootless Docker | `docker compose -f compose_rootless_robot.yaml up -d` |
+| `./dev.sh up` | start the container (default command) |
+| `./dev.sh down` | stop and remove it (build volumes are kept) |
+| `./dev.sh shell` | open a shell in it |
+| `./dev.sh status` | show the resolved settings |
+| `./dev.sh logs` | follow its logs |
+| `./dev.sh build` | build the image locally instead of pulling it |
 
-On the robot, use the lean headless target: `TARGET=robot docker compose -f compose_linux.yaml up -d`.
+`./dev.sh` turns the settings into a list of compose files: [compose.yaml](compose.yaml) plus one overlay per concern from [compose/](compose). It records that list at the end of `.env`, so plain `docker compose ps`, `logs` or `down` follow the last selection. Run ROS commands from a host shell that sourced ROS through `./dev.sh`, not plain `docker compose`: such shells export their own `ROS_DISTRO`, which plain compose would use.
 
-The architecture is picked automatically, so Apple Silicon Macs and the Jetson run native arm64 images without emulation. `compose_linux_arm.yaml` is gone: use `compose_linux.yaml` on arm64 too.
+Several distros can run side by side. Each one is its own compose project (`ros2_dev_<distro>`). With bridge networking, give each its own host ports in `.env` (`NOVNC_PORT`, `CODE_SERVER_PORT`, `SSH_PORT`, `VNC_PORT`, `ZENOH_PORT`).
 
-### Access to services
+## Images
 
-Once the container is up, the you can access the services via:
+One Dockerfile ([docker/Dockerfile](docker/Dockerfile)) builds four stacked targets per distro; each one contains the previous one:
 
-- VNC: http://localhost:3080 (`desktop` and `full`)
-- VScode: http://localhost:3081 (`desktop` and `full`)
-- SSH: `ssh ubuntu@localhost -p 3022`
-  - user: `ubuntu` (`root` in rootless mode)
-  - pass: `ubuntu`
+| Target | Adds | Use it for |
+|---|---|---|
+| `base` | ROS 2 base, build and debug tools (colcon, rosdep, gdb, ccache), SSH, Zenoh, Python venv `~/.py3` | headless development, CI |
+| `robot` | perception, RealSense, Livox SDK2, Dynamixel, CAN, Nav2, SLAM Toolbox, robot_localization | running on the robot |
+| `desktop` | rviz2/rqt, a lean XFCE desktop over VNC/noVNC, code-server | development with a GUI |
+| `full` | `desktop-full`, Gazebo (ros_gz), TurtleBot3 | simulation |
 
-Passwords are set when the container starts, from `DEV_PASSWORD` (ssh, default `ubuntu`), `VNC_PASSWORD` and `CODE_SERVER_PASSWORD`. When the VNC and code-server passwords are empty, those services are open. Set them when the robot is on a shared network.
+| Distro | Ubuntu | Python | Gazebo | Supported until |
+|---|---|---|---|---|
+| Humble | 22.04 | 3.10 | Fortress | May 2027 |
+| Jazzy | 24.04 | 3.12 | Harmonic | May 2029 |
+| Lyrical | 26.04 | 3.14 | Jetty | May 2031 |
 
-### NVIDIA GPU
+**Tags** are on Docker Hub, mirrored to `ghcr.io/h3ct0r/ros2_dev`:
+- `h3ct0rdcc/ros2_dev:<distro>-<target>`, e.g. `jazzy-desktop`;
+- `:<distro>` for that distro's `full`;
+- `:latest` for `jazzy-full`.
 
-`compose_linux_nvidia.yaml` needs the NVIDIA driver and `nvidia-container-toolkit` on the host.
+Until Humble's end of life, the Humble images also keep the old names `h3ct0rdcc/ros2_humble_development:{base,robot,desktop,full,latest,amd64,arm64}`.
 
-- **Host display.** Start apps with `DISPLAY=:0`. The Linux compose files hand your X11 cookie (`$XAUTHORITY`) to the container, so no `xhost` changes are needed; recreate the container after you log in again. If the desktop runs on an integrated GPU, as on most laptops, start them with `prime-run` (`DISPLAY=:0 prime-run rviz2`); otherwise they fall back to software rendering.
-- **VNC.** Apps in VNC render in software (llvmpipe). `prime-run` puts them on the GPU, but every frame is copied back to the VNC server, which caps them at about 30 FPS at 1920x1080. Use it for heavy scenes only.
-- **Headless rendering and CUDA.** Gazebo cameras and GPU lidars without a display, and CUDA in Open3D, use the GPU without `prime-run`.
+**Per-distro differences** (apt packages are listed per stage in [docker/packages/](docker/packages)):
+- **Lyrical** has no `turtlebot3` metapackage yet; its simulations are installed. `ros2_unbag` is left out because it pins numpy 1.26, which has no Python 3.14 wheels.
+- **Humble:** the TurtleBot3 Gazebo Classic simulations are only packaged for amd64. On arm64, pip installs `ros2_unbag` 1.0.x, because newer releases need glibc 2.39.
+- **Python venv:** numpy stays on the system's major version (1 on Humble and Jazzy, 2 on Lyrical), so ROS's compiled extensions such as `cv_bridge` keep working inside it.
 
-### Zenoh
+## Workspace
 
-Zenoh is off by default. `ROS_TRANSPORT` picks the middleware when the container starts:
+`local_mount/` is mounted as `~/ros2_ws`. `build/`, `install/` and `log/`, plus the ccache, live in per-distro Docker volumes (`ros2_dev_<distro>_build`, `_install`, `_log`, `_ccache`):
+- builds of different distros never mix;
+- a recreated container keeps its build;
+- builds on macOS are much faster than on a bind mount.
+
+colcon builds use symlink-install, Release, ccache and `compile_commands.json` by default ([configs/colcon/defaults.yaml](configs/colcon/defaults.yaml)). To start a distro's build from scratch:
+
+```bash
+docker volume rm ros2_dev_jazzy_build ros2_dev_jazzy_install ros2_dev_jazzy_log
+```
+
+## Access and passwords
+
+The container sets these passwords at startup:
+- `DEV_PASSWORD` for SSH, default `ubuntu`. The user is `ubuntu`, or `root` in rootless mode.
+- `VNC_PASSWORD` for the VNC/noVNC desktop.
+- `CODE_SERVER_PASSWORD` for code-server.
+
+The desktop and code-server are open while their passwords are empty. Set them before using the robot on a shared network.
+
+## ROS discovery and Zenoh
+
+`ROS_DISCOVERY=subnet|localhost` sets the discovery range in the form each distro understands: `ROS_LOCALHOST_ONLY` on Humble, `ROS_AUTOMATIC_DISCOVERY_RANGE` on Jazzy and Lyrical.
+
+Zenoh is off by default. `ROS_TRANSPORT` picks the middleware:
 
 | `ROS_TRANSPORT` | ROS nodes use | Also started | When |
 |---|---|---|---|
 | `dds` (default) | Fast DDS | – | one machine, or a LAN where DDS discovery works |
-| `zenoh` | `rmw_zenoh_cpp` | Zenoh router (`rmw_zenohd`) on TCP 7447 | every node on every machine uses Zenoh |
-| `bridge` | CycloneDDS | `zenoh-bridge-ros2dds` on TCP 7447 | DDS stays local on each machine; only Zenoh crosses the network |
+| `zenoh` | `rmw_zenoh_cpp` | Zenoh router on TCP 7447 | every node on every machine uses Zenoh |
+| `bridge` | CycloneDDS | `zenoh-bridge-ros2dds` on TCP 7447 | DDS stays local; only Zenoh crosses the network |
 
-To connect a laptop to the robot, run the robot with `ROS_TRANSPORT=zenoh` (or `bridge`). Then on the laptop set the same transport and point it at the robot:
+To connect a laptop to a robot, start the robot with `ROS_TRANSPORT=zenoh` (or `bridge`), then run this on the laptop:
 
+```bash
+ROS_TRANSPORT=zenoh ZENOH_CONNECT=tcp/<robot-ip>:7447 ./dev.sh up
 ```
-ROS_TRANSPORT=zenoh ZENOH_CONNECT=tcp/<robot-ip>:7447 docker compose -f compose_macos.yaml up -d
-```
 
-- `ZENOH_CONNECT` takes a comma-separated list of endpoints.
-- With `bridge`, `ZENOH_NAMESPACE=/bot1` on a robot prefixes everything it publishes, which keeps several robots apart. Other machines see its topics as `/bot1/...` and reach it the same way: `/bot1/cmd_vel` on the laptop is `/cmd_vel` on the robot.
-- Only one outbound TCP connection is needed, so this works through NAT, Docker bridge networks and rootless Docker, where DDS multicast does not.
-- The chosen middleware is applied to every shell: SSH, VNC terminals, code-server and `docker exec`.
+- With `bridge`, `ZENOH_NAMESPACE=/bot1` on a robot prefixes everything it publishes. `/bot1/cmd_vel` on the laptop is `/cmd_vel` on the robot.
+- Only one outbound TCP connection is needed, so this works through NAT, bridge networks and rootless Docker.
+- rmw_zenoh ignores the discovery-range variables.
 
-### Rootless Docker
+## NVIDIA GPU
 
-Set up rootless Docker with `dockerd-rootless-setuptool.sh install` (see the [Docker docs](https://docs.docker.com/engine/security/rootless/)), then use `compose_rootless.yaml`, `compose_rootless_nvidia.yaml` or `compose_rootless_robot.yaml`.
+Needs the NVIDIA driver and `nvidia-container-toolkit` on the host; `GPU=auto` then finds it.
 
-- **Files stay yours.** In rootless mode the container's root user is your host user. The entrypoint detects rootless Docker (a user namespace, plus a workspace owned by container root) and runs the session as `root`, with `/home/ubuntu` as its home. Files written to `local_mount/` are then owned by you on the host. Log in over SSH as `root` with `DEV_PASSWORD`. Set `ROOTLESS=1` or `ROOTLESS=0` to override the detection.
-- **Devices.** Host groups such as `dialout` don't reach a rootless container. Install [configs/udev/99-ros-dev.rules](configs/udev/99-ros-dev.rules) on the host for serial adapters (Dynamixel) and RealSense cameras.
-- **Network.** In rootless Docker, `network_mode: host` reaches the real host network only on Engine 29.5 or newer. That's what `compose_rootless_robot.yaml` needs for DDS discovery and SocketCAN; other containers on that host that talk DDS to it need `ipc: host` too, or Fast DDS's shared-memory transport drops their traffic. On older engines use `compose_rootless.yaml` with `ROS_TRANSPORT=zenoh` or `bridge`.
-- **NVIDIA.** `compose_rootless_nvidia.yaml` gets the GPU from the CDI spec that `nvidia-container-toolkit` generates, so it needs no `daemon.json` or `no-cgroups` changes.
-- **umask.** Rootless Docker starts `docker exec` processes with umask 0000. Shells reset it to 022, but other exec'd processes, such as a Dev Containers server, create world-writable files.
-- **Dev Containers.** Set `"remoteUser": "root"` in `devcontainer.json`.
+- **Host display:** start apps with `DISPLAY=:0`. The X11 cookie is handed over, so no `xhost` is needed. On laptops whose desktop runs on the integrated GPU, use `prime-run` (`DISPLAY=:0 prime-run rviz2`).
+- **VNC:** apps render in software. `prime-run` moves them to the GPU, but at about 30 FPS at 1080p.
+- **Headless rendering and CUDA** (Gazebo sensors, Open3D) use the GPU directly.
+- **Jetson:** `GPU=jetson` is experimental; the images are plain Ubuntu, not L4T.
+
+## Rootless Docker
+
+Set it up with `dockerd-rootless-setuptool.sh install` (see the [Docker docs](https://docs.docker.com/engine/security/rootless/)); `MODE=auto` then detects it.
+
+- **Files stay yours.** The container's root is your host user, so the session runs as `root` with `/home/ubuntu` as its home, and files in `local_mount/` belong to you. VS Code connects as that user automatically.
+- **Devices.** Host groups such as `dialout` don't reach a rootless container. Install [configs/udev/99-ros-dev.rules](configs/udev/99-ros-dev.rules) on the host, then set `DEVICES=all`.
+- **Network.** Host networking reaches the real host network only on rootless Docker Engine 29.5 or newer; `NETWORK=auto` falls back to bridge on older engines. Use Zenoh to reach other machines from there.
+- **NVIDIA.** Works through the CDI spec generated by `nvidia-container-toolkit`.
 - **Podman.** Rootless Podman works the same way. Alternatively, `--userns=keep-id:uid=1000,gid=1000` maps your user to `ubuntu`.
 
-### Build and Push
+## Building and publishing
 
-Builds both architectures for every target with [docker-bake.hcl](docker-bake.hcl):
+[CI](.github/workflows/ci.yml) builds and tests every distro on GitHub's amd64 and arm64 runners for each pull request. On `main` it also publishes all tags to Docker Hub and GHCR. That needs the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (a Docker Hub access token with write access).
 
-- `docker buildx bake --push release` pushes `:base`, `:robot`, `:desktop`, `:full`/`:latest` (amd64 + arm64), and the old single-arch `:amd64` and `:arm64` tags.
-- `CACHE=1 docker buildx bake --push release` also pushes a registry build cache.
-- `docker buildx bake --load --set '*.platform=linux/arm64' desktop` builds one local image.
+Locally, [docker-bake.hcl](docker-bake.hcl) builds any of them; each distro's base image is pinned by digest there:
 
-Notes:
-- On arm64, pip installs `ros2_unbag` 1.0.x. Newer releases pin PySide6 6.9, whose arm64 wheels need glibc 2.39, and Ubuntu 22.04 has 2.35.
-- TurtleBot3 Gazebo simulations are only packaged for amd64.
+```bash
+./dev.sh build --distro lyrical --target desktop                        # one image, this machine's arch
+docker buildx bake --load --set '*.platform=linux/arm64' jazzy-desktop  # the same with bake
+docker buildx bake jazzy                                                 # all of Jazzy's targets
+```
+
+## Coming from the previous setup
+
+The image sources from [h3ct0r/ros2_humble_docker_vnc_dev](https://github.com/h3ct0r/ros2_humble_docker_vnc_dev) now live here, with their history.
+
+| Before | Now |
+|---|---|
+| `docker compose -f compose_linux.yaml up -d` | `./dev.sh up` |
+| `compose_linux_nvidia.yaml` / `compose_rootless*.yaml` | `./dev.sh up`; GPU and rootless are detected |
+| `compose_macos.yaml` | `./dev.sh up` |
+| `TARGET=robot docker compose -f compose_linux.yaml up -d` | `./dev.sh up --target robot` |
+| one `.devcontainer/devcontainer.json` (macOS) | `.devcontainer/{humble,jazzy,lyrical}` on any host |
+| `ROS_LOCALHOST_ONLY=1` | `ROS_DISCOVERY=localhost` |
+| `h3ct0rdcc/ros2_humble_development:full` | `h3ct0rdcc/ros2_dev:humble-full` |
