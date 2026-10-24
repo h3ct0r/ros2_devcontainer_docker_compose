@@ -142,7 +142,8 @@ jobs:
           env_out=$(docker exec "ros2_dev_$DISTRO" bash -lc 'env | grep -E "^ROS_(LOCALHOST_ONLY|AUTOMATIC_DISCOVERY_RANGE)=" || true')
           echo "$env_out"
           if [ "$DISTRO" = humble ]; then
-            [ -z "$env_out" ]
+            # Humble's setup.bash itself sets ROS_LOCALHOST_ONLY=0
+            ! grep -q -e ROS_AUTOMATIC_DISCOVERY_RANGE -e 'ROS_LOCALHOST_ONLY=1' <<< "$env_out"
           else
             [ "$env_out" = "ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET" ]
           fi
