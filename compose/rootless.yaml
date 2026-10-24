@@ -1,0 +1,5 @@
+# Rootless Docker/Podman: the container's root is your host user, so files written to
+# the workspace stay yours. The entrypoint runs the session as root with HOME=/home/ubuntu.
+services:
+  ros2:
+    user: root

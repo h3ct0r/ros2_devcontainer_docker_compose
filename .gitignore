@@ -266,3 +266,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Merged compose files written by .devcontainer/initialize.sh
+.devcontainer/.generated/

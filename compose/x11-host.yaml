@@ -1,0 +1,7 @@
+# The host's X server (Linux): its socket, plus its cookie, so XWayland accepts the
+# container without xhost (the entrypoint adds the cookie for $DISPLAY).
+services:
+  ros2:
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${XAUTHORITY:-/dev/null}:/tmp/.host-xauthority:ro

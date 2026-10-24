@@ -1,0 +1,7 @@
+# Full device access: the host's /dev, privileged (serial adapters, cameras, CAN).
+# Under rootless Docker, USB devices also need configs/udev/99-ros-dev.rules on the host.
+services:
+  ros2:
+    privileged: true
+    volumes:
+      - /dev:/dev

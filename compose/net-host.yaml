@@ -1,0 +1,6 @@
+# Host networking (Linux): DDS discovery and multicast, SocketCAN, no port mapping.
+# ipc: host lets Fast DDS shared memory reach ROS nodes running on the host.
+services:
+  ros2:
+    network_mode: host
+    ipc: host

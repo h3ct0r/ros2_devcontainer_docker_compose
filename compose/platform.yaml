@@ -1,0 +1,4 @@
+# Another architecture under emulation (PLATFORM=linux/amd64 or linux/arm64)
+services:
+  ros2:
+    platform: ${PLATFORM}

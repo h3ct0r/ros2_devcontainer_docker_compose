@@ -1,0 +1,8 @@
+# Jetson (experimental): JetPack's nvidia runtime mounts the GPU libraries from the host.
+# The images are plain Ubuntu, not L4T, so CUDA inside the container is untested.
+services:
+  ros2:
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all

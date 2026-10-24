@@ -1,0 +1,13 @@
+# NVIDIA GPU through the NVIDIA Container Toolkit (rootful, or rootless through CDI).
+# On hybrid laptops, run apps on the GPU with `prime-run`.
+services:
+  ros2:
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              count: all

@@ -1,8 +1,10 @@
-# Only docker/, configs/ and third_party_pkgs/ are used by the build
 .git
 .github
+.devcontainer
 local_mount
 *.md
-compose*.yaml
+compose.yaml
+compose
+dev.sh
 docker-bake.hcl
 .env*

@@ -1,0 +1,5 @@
+# Rootful host networking: share the host's process namespace too, which Fast DDS
+# shared memory uses to tell live peers from stale segments.
+services:
+  ros2:
+    pid: host
