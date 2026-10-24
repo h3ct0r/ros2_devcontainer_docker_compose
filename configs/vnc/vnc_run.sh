@@ -9,10 +9,20 @@ else
     sudo -n rm -f /tmp/.X2-lock /tmp/.X11-unix/X2
 fi
 
-mkdir -p "${HOME}/.vnc"
+# TigerVNC 1.15+ (Lyrical) keeps its files in ~/.config/tigervnc and moves an old ~/.vnc
+# there, which fails for a folder from an image layer; older versions use ~/.vnc. So the
+# image ships no ~/.vnc: xstartup is copied into the right folder at every start.
+if grep -qs vncLegacyDir /usr/share/perl5/TigerVNC/Config.pm; then
+    vnc_dir="${HOME}/.config/tigervnc"
+else
+    vnc_dir="${HOME}/.vnc"
+fi
+mkdir -p "${vnc_dir}"
+cp /usr/local/share/ros_dev/vnc_xstartup "${vnc_dir}/xstartup"
+
 if [ -n "${VNC_PASSWORD}" ]; then
-    echo "${VNC_PASSWORD}" | tigervncpasswd -f > "${HOME}/.vnc/passwd"
-    chmod 600 "${HOME}/.vnc/passwd"
+    echo "${VNC_PASSWORD}" | tigervncpasswd -f > "${vnc_dir}/passwd"
+    chmod 600 "${vnc_dir}/passwd"
     set -- -SecurityTypes VncAuth
 else
     set -- -SecurityTypes None --I-KNOW-THIS-IS-INSECURE

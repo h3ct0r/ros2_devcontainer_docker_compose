@@ -198,6 +198,8 @@ RUN ln -s vnc.html /usr/lib/novnc/index.html \
 
 COPY configs/supervisord/desktop.conf /etc/supervisor/conf.d/desktop.conf
 COPY --chmod=755 configs/vnc/vnc_run.sh configs/vnc/code_server_run.sh configs/nvidia/prime-run /usr/local/bin/
+# vnc_run.sh copies it into ~/.vnc or ~/.config/tigervnc, depending on the TigerVNC version
+COPY --chmod=755 configs/vnc/xstartup /usr/local/share/ros_dev/vnc_xstartup
 COPY configs/xfce/xfce4_defaults /usr/share/xfwm4/defaults
 COPY configs/xfce/helpers.rc /etc/xdg/xfce4/helpers.rc
 
@@ -237,10 +239,20 @@ EOF
 
 USER ${USERNAME}
 
-COPY --chown=${USERNAME}:${USERNAME} --chmod=755 configs/vnc/xstartup /home/ubuntu/.vnc/xstartup
 COPY --chown=${USERNAME}:${USERNAME} configs/xfce/xfce4-screensaver.xml /home/ubuntu/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-screensaver.xml
 # Seed the panel config so the "first start of the panel" dialog never shows
 RUN cp /etc/xdg/xfce4/panel/default.xml /home/ubuntu/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
+
+# xfdesktop 4.20+ (Lyrical) sets no wallpaper for the VNC screen (VNC-0) and shows black;
+# older versions fall back to their default wallpaper on their own
+RUN if dpkg --compare-versions "$(dpkg-query -W -f='${Version}' xfdesktop4)" ge 4.20; then \
+        workspaces=""; \
+        for n in 0 1 2 3; do \
+            workspaces="${workspaces}<property name=\"workspace${n}\" type=\"empty\"><property name=\"image-style\" type=\"int\" value=\"5\"/><property name=\"last-image\" type=\"string\" value=\"/usr/share/backgrounds/xfce/xfce-shapes.svg\"/></property>"; \
+        done; \
+        printf '<?xml version="1.0" encoding="UTF-8"?>\n<channel name="xfce4-desktop" version="1.0"><property name="backdrop" type="empty"><property name="screen0" type="empty"><property name="monitorVNC-0" type="empty">%s</property></property></property></channel>\n' "${workspaces}" \
+            > /home/ubuntu/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml; \
+    fi
 
 # ---------------------------------------------------------------------------
 FROM desktop AS full
