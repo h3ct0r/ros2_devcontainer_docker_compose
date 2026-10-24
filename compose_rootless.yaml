@@ -1,0 +1,23 @@
+# Rootless Docker (or Podman) on a Linux workstation.
+# Container root is your host user, so files in local_mount/ stay yours and X11
+# apps reach your display without xhost changes.
+#   docker compose -f compose_rootless.yaml up -d
+# To reach a robot, use Zenoh: ROS_TRANSPORT=zenoh ZENOH_CONNECT=tcp/<robot-ip>:7447
+services:
+  ros2:
+    extends:
+      file: compose.common.yaml
+      service: ros2
+    user: root
+    shm_size: 1gb
+    volumes:
+      - ${XAUTHORITY:-/dev/null}:/tmp/.host-xauthority:ro   # host X11 cookie (Wayland desktops)
+    ports:
+      - "3080:3080"   # noVNC
+      - "3081:3081"   # code-server
+      - "3022:3022"   # ssh (user root, password DEV_PASSWORD)
+      - "5902:5902"   # VNC
+      - "7447:7447"   # Zenoh (ROS_TRANSPORT=zenoh or bridge)
+    # Serial/USB devices: install configs/udev/99-ros-dev.rules on the host, then e.g.
+    # devices:
+    #   - /dev/ttyUSB0

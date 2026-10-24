@@ -1,0 +1,184 @@
+name: CI/CD with Docker Compose Linux Host
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "configs/**"
+      - "docker/**"
+      - "local_mount/**"
+      - "third_party_pkgs/**"
+      - ".github/workflows/build-amd64.yaml"
+  # Pull requests run the tests but skip the GHCR push
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "configs/**"
+      - "docker/**"
+      - "local_mount/**"
+      - "third_party_pkgs/**"
+      - ".github/workflows/build-amd64.yaml"
+  workflow_dispatch:
+
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: ${{ github.repository }}/ros2_humble_development
+  TAG: amd64
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # The ROS images need far more disk than the hosted runner has free by default
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          docker image prune --all --force
+          df -h /
+
+      # Install the cosign tool except on PR
+      # https://github.com/sigstore/cosign-installer
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3.3.0 #v3.1.1
+        with:
+          cosign-release: "v2.2.2"
+
+      # Set up BuildKit Docker container builder to be able to build
+      # multi-platform images and export cache
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
+      - name: Build base and robot targets
+        run: docker buildx bake --load --set '*.platform=linux/amd64' base robot
+
+      - name: Test base image tools
+        run: |
+          docker run --rm h3ct0rdcc/ros2_humble_development:base bash -lc \
+            'ros2 pkg list > /dev/null && colcon --help > /dev/null && /home/ubuntu/.py3/bin/python -c "import open3d, rclpy" && zenoh-bridge-ros2dds --help > /dev/null'
+
+      - name: Test Zenoh between two containers
+        run: |
+          docker network create zenoh-ci
+          docker run -d --name zenoh-a --network zenoh-ci -e ROS_TRANSPORT=zenoh h3ct0rdcc/ros2_humble_development:base
+          docker run -d --name zenoh-b --network zenoh-ci -e ROS_TRANSPORT=zenoh -e ZENOH_CONNECT=tcp/zenoh-a:7447 h3ct0rdcc/ros2_humble_development:base
+          sleep 10
+          docker exec zenoh-a bash -lc 'timeout 60 ros2 topic echo --once /ci_ping std_msgs/msg/String' > echo.log &
+          sleep 5
+          docker exec zenoh-b bash -lc 'ros2 topic pub --times 20 --rate 2 /ci_ping std_msgs/msg/String "{data: zenoh-ok}"'
+          wait
+          cat echo.log
+          grep -q zenoh-ok echo.log
+
+      - name: Remove Zenoh test containers
+        if: always()
+        run: |
+          docker rm -f zenoh-a zenoh-b || true
+          docker network rm zenoh-ci || true
+
+      - name: Build and start Docker Compose services
+        run: docker compose -f compose_linux.yaml up -d --build
+
+      - name: Wait for services to be healthy (optional, but recommended)
+        # You can use a dedicated action or a script to wait for health checks
+        # Example using a simple sleep (adjust as needed for your application)
+        run: sleep 30
+
+      - name: Test noVNC is up
+        run: |
+          SERVICE_URL="http://localhost:3080"
+          EXPECTED_RESPONSE="200"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL)
+          if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
+              echo "Test Passed: Service returned expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 0
+          else
+              echo "Test Failed: Service response did not match expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 1
+          fi
+
+      - name: Test code-server is up
+        run: |
+          SERVICE_URL="http://localhost:3081"
+          EXPECTED_RESPONSE="200"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL)
+          if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
+              echo "Test Passed: Service returned expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 0
+          else
+              echo "Test Failed: Service response did not match expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 1
+          fi
+
+      - name: Test sshd is up
+        run: |
+          EXPECTED_RESPONSE="1"
+          RESPONSE=$(ss -ltn | grep '0.0.0.0:3022 ' | wc -l)
+          if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
+              echo "Test Passed: Service returned expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 0
+          else
+              echo "Test Failed: Service response did not match expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              exit 1
+          fi
+
+      - name: Check running containers (optional for debugging)
+        run: docker ps -a
+
+      - name: Stop and remove containers
+        if: always()
+        run: docker compose -f compose_linux.yaml down
+
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          target: full
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

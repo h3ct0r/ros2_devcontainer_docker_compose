@@ -1,0 +1,15 @@
+# Device access for the ROS containers. Needed under rootless Docker/Podman, where
+# host groups such as dialout and plugdev do not reach the container.
+# Install on the host:
+#   sudo cp configs/udev/99-ros-dev.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# USB serial adapters (Dynamixel U2D2/FTDI, CP210x, CH34x) and CDC-ACM boards
+SUBSYSTEM=="tty", KERNEL=="ttyUSB[0-9]*", MODE="0666"
+SUBSYSTEM=="tty", KERNEL=="ttyACM[0-9]*", MODE="0666"
+
+# Intel RealSense cameras: USB device, video nodes and IMU (hidraw/iio)
+SUBSYSTEM=="usb", ATTRS{idVendor}=="8086", MODE="0666"
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="8086", MODE="0666"
+KERNEL=="hidraw*", ATTRS{idVendor}=="8086", MODE="0666"
+SUBSYSTEM=="iio", ATTRS{idVendor}=="8086", MODE="0666"

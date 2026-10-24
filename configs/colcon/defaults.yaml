@@ -1,0 +1,9 @@
+# colcon defaults for this container (COLCON_HOME=/home/ubuntu/.colcon).
+# Passing --cmake-args on the command line replaces the list below.
+build:
+  symlink-install: true
+  cmake-args:
+    - -DCMAKE_BUILD_TYPE=Release
+    - -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    - -DCMAKE_C_COMPILER_LAUNCHER=ccache
+    - -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
