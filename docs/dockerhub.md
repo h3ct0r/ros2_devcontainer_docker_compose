@@ -37,7 +37,7 @@ docker run -d --name ros2 -p 3080:3080 -p 3081:3081 -p 3022:3022 --shm-size 1g h
 | `base` | ROS 2 base, build and debug tools, SSH, Zenoh, Python venv |
 | `robot` | perception, Nav2, SLAM Toolbox, robot_localization, RealSense, Livox, Dynamixel, CAN |
 | `desktop` | rviz2, rqt, XFCE desktop over noVNC, code-server |
-| `full` | `desktop-full`, Gazebo (ros_gz), TurtleBot3 |
+| `full` | `desktop-full`, Gazebo (ros_gz), MuJoCo, TurtleBot3 |
 
 | Distro | Ubuntu | Tags |
 |---|---|---|
@@ -63,6 +63,7 @@ The desktop and code-server have no password unless `VNC_PASSWORD` and `CODE_SER
 - [Getting started](https://github.com/h3ct0r/ros2_devcontainer_docker_compose/blob/main/docs/getting-started.md)
 - [Configuration](https://github.com/h3ct0r/ros2_devcontainer_docker_compose/blob/main/docs/configuration.md)
 - [Networking and Zenoh](https://github.com/h3ct0r/ros2_devcontainer_docker_compose/blob/main/docs/networking.md)
+- [Running on a robot](https://github.com/h3ct0r/ros2_devcontainer_docker_compose/blob/main/docs/robot.md)
 - [Hosts and hardware](https://github.com/h3ct0r/ros2_devcontainer_docker_compose/blob/main/docs/hosts.md)
 - [Images](https://github.com/h3ct0r/ros2_devcontainer_docker_compose/blob/main/docs/images.md)
 

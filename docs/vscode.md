@@ -56,6 +56,12 @@ VS Code waits for `postCreateCommand`, so the first open of a large workspace ta
 
 The VS Code session runs as the container's user: `ubuntu` normally, `root` under rootless Docker. Under rootless Docker, the container's root is your host user, so files in `local_mount` stay yours either way. See [Rootless Docker](hosts.md#rootless-docker-and-podman).
 
+### Without internet
+
+VS Code installs its server and the extensions below into `~/.vscode-server`, a Docker volume (`ros2_dev_<distro>_vscode`). The first start downloads them; later starts, including after **Rebuild Container**, reuse them. The devcontainer tool itself uses the local image and doesn't contact Docker Hub when the image is already there.
+
+For a robot without internet, connect over SSH instead; see [Running on a robot](robot.md#ssh-and-vs-code).
+
 ### Extensions and settings
 
 Each config installs these extensions in the container:

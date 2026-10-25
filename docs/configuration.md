@@ -63,6 +63,7 @@ These go straight to the container.
 | `CODE_SERVER_PASSWORD` | empty | code-server password; empty means no password |
 | `NOVNC_PORT`, `CODE_SERVER_PORT`, `SSH_PORT`, `VNC_PORT`, `ZENOH_PORT` | `3080`, `3081`, `3022`, `5902`, `7447` | host ports with bridge networking |
 | `TZ` | `UTC` | container time zone |
+| `RESTART` | `no` | `unless-stopped` starts the container again after a reboot, e.g. on a robot |
 | `WORKSPACE` | `./local_mount` | host folder mounted as `~/ros2_ws` |
 | `IMAGE` | `h3ct0rdcc/ros2_dev` | image repository, e.g. `ghcr.io/h3ct0r/ros2_dev` |
 

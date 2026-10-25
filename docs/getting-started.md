@@ -68,6 +68,7 @@ The container's workspace is `~/ros2_ws` (`/home/ubuntu/ros2_ws`):
 | `~/ros2_ws/src` | `local_mount/src` on the host | your code, edited with any tool |
 | `~/ros2_ws/build`, `install`, `log` | Docker volumes `ros2_dev_<distro>_build`, `_install`, `_log` | builds of different distros never mix, and they're fast on macOS |
 | `~/.cache/ccache` | Docker volume `ros2_dev_<distro>_ccache` | compiler cache, kept across container rebuilds |
+| `~/.vscode-server` | Docker volume `ros2_dev_<distro>_vscode` | VS Code's server and extensions, downloaded once |
 
 To use a folder other than `local_mount`, set `WORKSPACE=/path/to/ws` in `.env`. That folder is mounted as `~/ros2_ws`, so put packages in its `src/`.
 
@@ -113,4 +114,5 @@ docker volume rm ros2_dev_jazzy_build ros2_dev_jazzy_install ros2_dev_jazzy_log
 
 - [Configuration](configuration.md): choose the distro, image, GPU and network.
 - [Networking and Zenoh](networking.md): talk to a robot or another machine.
+- [Running on a robot](robot.md): deploy without internet.
 - [Troubleshooting](troubleshooting.md): if something doesn't start.

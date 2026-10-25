@@ -91,6 +91,12 @@ docker volume rm ros2_dev_jazzy_build ros2_dev_jazzy_install ros2_dev_jazzy_log
 ./dev.sh up
 ```
 
+## VS Code or the devcontainer needs internet on the robot
+
+The first connection downloads VS Code's server and extensions into the container. Connect over Remote-SSH from a laptop with `remote.SSH.localServerDownload` set to `always`, so the laptop downloads them; they're kept in a volume afterwards. See [Running on a robot](robot.md#ssh-and-vs-code).
+
+If the devcontainer tries to download the image, the robot doesn't have it under the exact name `./dev.sh status` shows; copy it as in [step 2](robot.md#2-copy-the-image-and-the-repo).
+
 ## Old image after an update
 
 `./dev.sh up` uses the image already on your machine. To fetch the newest one:
