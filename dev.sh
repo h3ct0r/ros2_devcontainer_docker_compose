@@ -37,7 +37,7 @@ die() {
 }
 
 usage() {
-    sed -n '2,25p' "$0" | sed -E 's/^# ?//'
+    sed -n '2,24p' "$0" | sed -E 's/^# ?//'
 }
 
 # Sets a setting and remembers where it came from: set_value NAME VALUE SOURCE
