@@ -100,7 +100,7 @@ flowchart LR
     detect["detection: OS, docker info,<br/>NVIDIA runtime / CDI, Jetson"] --> dev
     dev["dev.sh"] --> files["COMPOSE_FILE<br/>(written to .env)"]
     files --> compose["docker compose"]
-    compose --> container["container<br/>ros2_dev_&lt;distro&gt;"]
+    compose --> container["container<br/>ros2_dev_#60;distro#62;"]
 ```
 
 | Overlay | Added when | Does |

@@ -4,7 +4,7 @@ One [Dockerfile](../docker/Dockerfile) builds four targets for each distro, for 
 
 ```mermaid
 flowchart LR
-    ros["ros:&lt;distro&gt;-ros-base"] --> base --> robot --> desktop --> full
+    ros["ros:#60;distro#62;-ros-base"] --> base --> robot --> desktop --> full
 ```
 
 | Target | Adds | Use it for |
