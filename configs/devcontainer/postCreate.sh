@@ -8,10 +8,14 @@
 #source /opt/ros/$ROS_DISTRO/setup.bash
 
 mkdir -p /home/ubuntu/ros2_ws/src
-sudo chown -R $(whoami) /home/ubuntu/
+# Only the workspace: a recursive chown of the home would copy the whole venv
+# into the container layer
+sudo chown -R "$(id -u):$(id -g)" /home/ubuntu/ros2_ws
 
 cd /home/ubuntu/ros2_ws/
 
-rosdep install --from-paths /home/ubuntu/ros2_ws/src --ignore-src --rosdistro humble
+sudo apt-get update
+rosdep install --from-paths /home/ubuntu/ros2_ws/src --ignore-src --rosdistro "${ROS_DISTRO}" -y
 
-MAKEFLAGS="-j6" colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+# symlink-install, Release and ccache come from ~/.colcon/defaults.yaml
+MAKEFLAGS="-j6" colcon build

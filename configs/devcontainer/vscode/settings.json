@@ -52,7 +52,9 @@
     "C_Cpp.intelliSenseCacheSize": 0,
     "C_Cpp.intelliSenseEngine": "Tag Parser",
     "python.analysis.extraPaths": [
-        "/opt/ros/noetic/lib/python3/dist-packages"
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/jazzy/lib/python3.12/site-packages",
+        "/opt/ros/lyrical/lib/python3.14/site-packages"
     ],
     "terminal.integrated.profiles.linux": {
                     "bash": {

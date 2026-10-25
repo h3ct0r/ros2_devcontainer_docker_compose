@@ -1,0 +1,11 @@
+# Bridge network with published ports (macOS, or Linux without host networking).
+# Change the host side with the *_PORT settings to run several distros side by side.
+services:
+  ros2:
+    shm_size: 1gb
+    ports:
+      - "${NOVNC_PORT:-3080}:3080"   # noVNC
+      - "${CODE_SERVER_PORT:-3081}:3081"   # code-server
+      - "${SSH_PORT:-3022}:3022"   # ssh
+      - "${VNC_PORT:-5902}:5902"   # VNC
+      - "${ZENOH_PORT:-7447}:7447"   # Zenoh (ROS_TRANSPORT=zenoh or bridge)

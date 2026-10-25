@@ -1,0 +1,56 @@
+// ROS 2 Jazzy devcontainer. The three distro configs differ only in the distro:
+// keep them in sync. Host setup (GPU, rootless, network, devices) comes from .env
+// and auto-detection, through initialize.sh -> ./dev.sh configure.
+{
+    "name": "ROS 2 Jazzy",
+    "initializeCommand": ".devcontainer/initialize.sh jazzy",
+    "dockerComposeFile": [
+        "../.generated/jazzy/compose.yaml"
+    ],
+    "service": "ros2",
+    "workspaceFolder": "/home/ubuntu",
+    "shutdownAction": "stopCompose",
+    "onCreateCommand": "/onCreate.sh",
+    "postCreateCommand": "/postCreate.sh",
+    "postAttachCommand": "/postAttach.sh",
+    "waitFor": "postCreateCommand",
+    "containerEnv": {
+        "QT_X11_NO_MITSHM": "1"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.debugpy",
+                "ms-python.black-formatter",
+                "ms-python.vscode-python-envs",
+                "kevinrose.vsc-python-indent",
+                "njpwerner.autodocstring",
+                "ms-vscode.cpptools",
+                "ms-vscode.cpptools-extension-pack",
+                "ms-vscode.cpptools-themes",
+                "ms-vscode.cmake-tools",
+                "wholroyd.jinja",
+                "eamodio.gitlens",
+                "ranch-hand-robotics.rde-pack",
+                "ranch-hand-robotics.urdf-editor",
+                "ranch-hand-robotics.rde-ros-2"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/home/ubuntu/.py3/bin/python",
+                "terminal.integrated.profiles.linux": {
+                    "bash": {
+                        "path": "/usr/bin/bash",
+                        "icon": "terminal-bash"
+                    }
+                },
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "cmake.autoSelectActiveFolder": false,
+                "cmake.automaticReconfigure": false,
+                "cmake.configureOnEdit": false,
+                "cmake.ignoreCMakeListsMissing": true
+            }
+        }
+    }
+}

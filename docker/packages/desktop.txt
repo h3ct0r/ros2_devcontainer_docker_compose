@@ -1,0 +1,26 @@
+# desktop: rviz/rqt and a lean XFCE (no goodies) over TigerVNC + noVNC
+@desktop
+@rqt-tf-tree
+@nav2-rviz-plugins
+xfce4-session
+xfwm4
+xfce4-panel
+xfdesktop4
+xfce4-settings
+thunar
+greybird-gtk-theme
+elementary-xfce-icon-theme
+librsvg2-common
+dbus-x11
+at-spi2-core
+terminator
+xterm
+tigervnc-standalone-server
+tigervnc-tools
+websockify
+mesa-utils
+libxcb-cursor0
+libxcb-shape0
+libxcb-icccm4
+libxcb-keysyms1
+libxkbcommon-x11-0

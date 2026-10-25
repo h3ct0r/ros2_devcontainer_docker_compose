@@ -1,0 +1,2 @@
+# TurtleBot3 Gazebo Classic simulations are only packaged for amd64
+@turtlebot3-simulations

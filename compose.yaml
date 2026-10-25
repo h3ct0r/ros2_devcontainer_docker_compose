@@ -1,0 +1,40 @@
+# The development container. ./dev.sh adds the host-specific overlays from compose/
+# (network, devices, GPU, rootless, platform) and records the list in .env as
+# COMPOSE_FILE, so plain `docker compose up -d` uses the same selection.
+# All settings are described in .env.example.
+name: ros2_dev_${ROS_DISTRO:-jazzy}
+
+services:
+  ros2:
+    container_name: ros2_dev_${ROS_DISTRO:-jazzy}
+    image: ${IMAGE:-h3ct0rdcc/ros2_dev}:${ROS_DISTRO:-jazzy}-${TARGET:-desktop}
+    hostname: ros2-${ROS_DISTRO:-jazzy}
+    extra_hosts:
+      - "ros2-${ROS_DISTRO:-jazzy}:127.0.0.1"
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - TZ=${TZ:-UTC}
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - ROS_DISCOVERY=${ROS_DISCOVERY:-subnet}
+      - ROS_TRANSPORT=${ROS_TRANSPORT:-dds}
+      - ZENOH_CONNECT=${ZENOH_CONNECT:-}
+      - ZENOH_NAMESPACE=${ZENOH_NAMESPACE:-}
+      - DEV_PASSWORD=${DEV_PASSWORD:-ubuntu}
+      - VNC_PASSWORD=${VNC_PASSWORD:-}
+      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:-}
+    volumes:
+      # Your sources and shell history stay on the host
+      - ${WORKSPACE:-./local_mount}:/home/ubuntu/ros2_ws
+      # Build output and compiler cache per distro (named volumes ros2_dev_<distro>_*),
+      # so builds of different distros never mix
+      - build:/home/ubuntu/ros2_ws/build
+      - install:/home/ubuntu/ros2_ws/install
+      - log:/home/ubuntu/ros2_ws/log
+      - ccache:/home/ubuntu/.cache/ccache
+      - /etc/localtime:/etc/localtime:ro
+
+volumes:
+  build:
+  install:
+  log:
+  ccache:

@@ -1,0 +1,10 @@
+.git
+.github
+.devcontainer
+local_mount
+*.md
+compose.yaml
+compose
+dev.sh
+docker-bake.hcl
+.env*

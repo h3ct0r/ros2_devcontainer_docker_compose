@@ -1,0 +1,7 @@
+# Installed into the venv /home/ubuntu/.py3, which also sees the apt and ROS Python
+# packages. numpy is held to the system's major version so ROS extensions keep working.
+colcon-top-level-workspace
+pyserial
+open3d
+scipy
+tqdm

@@ -1,0 +1,2 @@
+# No turtlebot3 metapackage on Lyrical yet; the simulations are packaged
+@turtlebot3-simulations
