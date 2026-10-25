@@ -140,7 +140,7 @@ RUN sed -i -e '/case $- in/,+3 s/^/#/g' /home/ubuntu/.bashrc \
     && echo 'source /etc/ros_dev.bashrc' >> /home/ubuntu/.bashrc \
     && touch /home/ubuntu/.Xauthority \
     && mkdir -p "${ROS_WORKSPACE}/src" "${ROS_WORKSPACE}/build" "${ROS_WORKSPACE}/install" "${ROS_WORKSPACE}/log" \
-        /home/ubuntu/.cache/ccache \
+        /home/ubuntu/.cache/ccache /home/ubuntu/.vscode-server \
     && rosdep update --rosdistro "${ROS_DISTRO}"
 
 # Python venv that still sees the apt and ROS Python packages (needed by colcon
@@ -260,10 +260,22 @@ ARG TARGETARCH
 ARG ROS_DISTRO
 USER root
 
-# Simulation: Gazebo through ros_gz (Fortress, Harmonic or Jetty, from packages.ros.org)
+# Simulation: Gazebo through ros_gz (Fortress, Harmonic or Jetty) and MuJoCo with
+# mujoco_ros2_control, all from packages.ros.org
 RUN --mount=type=cache,id=apt-cache-${ROS_DISTRO}-${TARGETARCH},target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=apt-lists-${ROS_DISTRO}-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
     --mount=type=bind,source=docker/packages,target=/tmp/packages \
     /tmp/packages/install.sh full
 
 USER ${USERNAME}
+
+# MuJoCo's Python bindings and viewer, with numpy held to the system's major version
+ARG USER_UID=1000
+ARG USER_GID=${USER_UID}
+RUN --mount=type=cache,id=pip-${ROS_DISTRO}-${TARGETARCH},target=/tmp/pip-cache,uid=${USER_UID},gid=${USER_GID} \
+    --mount=type=bind,source=docker/python,target=/tmp/python \
+    numpy_major=$(python3 -c 'import numpy; print(numpy.__version__.split(".")[0])') \
+    && echo "numpy>=${numpy_major},<$((numpy_major + 1))" > /tmp/numpy-constraint.txt \
+    && PIP_CACHE_DIR=/tmp/pip-cache PIP_CONSTRAINT=/tmp/numpy-constraint.txt /home/ubuntu/.py3/bin/pip install \
+        -r /tmp/python/requirements.full.txt \
+    && rm /tmp/numpy-constraint.txt

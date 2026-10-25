@@ -9,6 +9,8 @@ services:
     container_name: ros2_dev_${ROS_DISTRO:-jazzy}
     image: ${IMAGE:-h3ct0rdcc/ros2_dev}:${ROS_DISTRO:-jazzy}-${TARGET:-desktop}
     hostname: ros2-${ROS_DISTRO:-jazzy}
+    # unless-stopped on a robot: the container comes back after a reboot
+    restart: ${RESTART:-no}
     extra_hosts:
       - "ros2-${ROS_DISTRO:-jazzy}:127.0.0.1"
     environment:
@@ -31,6 +33,9 @@ services:
       - install:/home/ubuntu/ros2_ws/install
       - log:/home/ubuntu/ros2_ws/log
       - ccache:/home/ubuntu/.cache/ccache
+      # VS Code server and extensions (devcontainers, Remote-SSH): downloaded once,
+      # then reused by recreated containers, also without internet
+      - vscode:/home/ubuntu/.vscode-server
       - /etc/localtime:/etc/localtime:ro
 
 volumes:
@@ -38,3 +43,4 @@ volumes:
   install:
   log:
   ccache:
+  vscode:
