@@ -1,0 +1,3 @@
+# Installed into the venv in the full target only. mujoco: the Python bindings and the
+# interactive viewer (python -m mujoco.viewer); they ship their own MuJoCo library.
+mujoco

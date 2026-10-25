@@ -60,6 +60,8 @@ For a headless robot:
 ./dev.sh up --target robot
 ```
 
+[Running on a robot](robot.md) covers copying the image without internet, starting on boot and connecting VS Code.
+
 ## Rootless Docker and Podman
 
 [Rootless Docker](https://docs.docker.com/engine/security/rootless/) runs the daemon as your user. Set it up once:

@@ -1,6 +1,10 @@
-# full: simulation. ros_gz brings Gazebo Fortress (Humble), Harmonic (Jazzy) or Jetty (Lyrical)
+# full: simulation. ros_gz brings Gazebo Fortress (Humble), Harmonic (Jazzy) or Jetty (Lyrical);
+# mujoco-vendor brings MuJoCo and its simulate app, mujoco_ros2_control drives robots in it
 @desktop-full
 @ros-gz
 @turtlebot3-msgs
+@mujoco-vendor
+@mujoco-ros2-control
+@mujoco-ros2-control-demos
 ffmpeg
 pcl-tools

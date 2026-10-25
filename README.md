@@ -13,11 +13,12 @@ Ready-to-use ROS 2 environments for Humble, Jazzy and Lyrical. Each one comes wi
 ## Features
 
 - **Three distros, one setup.** Humble, Jazzy and Lyrical images, built natively for amd64 and arm64 (Apple Silicon, Jetson, ARM servers).
-- **Desktop in the browser.** XFCE over noVNC with rviz2 and rqt, plus Gazebo in the `full` image. Nothing to install on the host besides Docker.
+- **Desktop in the browser.** XFCE over noVNC with rviz2 and rqt, plus Gazebo and MuJoCo in the `full` image. Nothing to install on the host besides Docker.
 - **VS Code ready.** One devcontainer per distro, plus code-server and SSH for working on a robot.
 - **Detects your machine.** `./dev.sh` picks networking, devices, NVIDIA GPU and rootless Docker on its own. Any choice can be overridden.
 - **Fast rebuilds.** Build output and ccache live in per-distro volumes; colcon defaults to symlink-install, Release and `compile_commands.json`.
 - **Multi-machine ROS.** Zenoh (`rmw_zenoh` or `zenoh-bridge-ros2dds`) connects a laptop and a robot across networks, NAT and Docker bridges.
+- **Robots without internet.** Copy the image over SSH, connect VS Code from the laptop, and bake your dependencies into the image; see [Running on a robot](docs/robot.md).
 
 ## Quick start
 
@@ -67,7 +68,7 @@ Images are published to Docker Hub as `h3ct0rdcc/ros2_dev:<distro>-<target>` and
 | `base` | ROS 2 base, build and debug tools, SSH, Zenoh, Python venv | 1.0–1.2 GB / 0.6–0.8 GB |
 | `robot` | perception, Nav2, SLAM Toolbox, robot_localization, RealSense, Livox, Dynamixel, CAN | 2.0–2.5 GB / 1.5–2.0 GB |
 | `desktop` (default) | rviz2, rqt, XFCE desktop over noVNC, code-server | 2.3–2.7 GB / 1.8–2.3 GB |
-| `full` | `desktop-full`, Gazebo (ros_gz), TurtleBot3 | 2.5–2.8 GB / 1.9–2.3 GB |
+| `full` | `desktop-full`, Gazebo (ros_gz), MuJoCo (mujoco_ros2_control, Python viewer), TurtleBot3 | 2.5–2.8 GB / 1.9–2.3 GB |
 
 | Distro | Ubuntu | Gazebo | Supported until | Tags |
 |---|---|---|---|---|
@@ -96,6 +97,7 @@ More in [docs/images.md](docs/images.md).
 | [Configuration](docs/configuration.md) | every setting, `dev.sh`, compose overlays, running several distros |
 | [VS Code](docs/vscode.md) | devcontainers per distro, code-server, extensions |
 | [Networking and Zenoh](docs/networking.md) | ROS discovery, connecting a laptop to a robot |
+| [Running on a robot](docs/robot.md) | deploying without internet, VS Code over SSH, baking in dependencies |
 | [Hosts and hardware](docs/hosts.md) | macOS, Linux, NVIDIA, Jetson, rootless Docker, USB devices |
 | [Images](docs/images.md) | targets, tags, distro differences, building locally |
 | [Troubleshooting](docs/troubleshooting.md) | common problems and their fixes |

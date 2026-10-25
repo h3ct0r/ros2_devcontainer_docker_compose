@@ -12,7 +12,7 @@ flowchart LR
 | `base` | build and debug tools (colcon, rosdep, gdb, ccache, ament lint), SSH, rmw_zenoh, CycloneDDS, zenoh-bridge-ros2dds, Python venv `~/.py3` with Open3D and SciPy | headless development, CI |
 | `robot` | perception, Nav2, SLAM Toolbox, robot_localization, spatio-temporal voxel layer, RealSense, Livox SDK2, Dynamixel, SocketCAN, teleop | running on the robot |
 | `desktop` | ROS `desktop` (rviz2, rqt), Nav2 rviz plugins, XFCE over TigerVNC and noVNC, code-server | development with a GUI |
-| `full` | ROS `desktop-full`, Gazebo through `ros_gz`, TurtleBot3, ffmpeg, PCL tools | simulation |
+| `full` | ROS `desktop-full`, Gazebo through `ros_gz`, MuJoCo (`mujoco_vendor`, `mujoco_ros2_control` and its demos, the `mujoco` Python bindings with the viewer), TurtleBot3, ffmpeg, PCL tools | simulation |
 
 The exact apt packages of each target are listed in [docker/packages/](../docker/packages), and the Python packages in [docker/python/](../docker/python).
 

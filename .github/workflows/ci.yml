@@ -104,6 +104,13 @@ jobs:
             'ros2 pkg list > /dev/null && colcon --help > /dev/null && /home/ubuntu/.py3/bin/python -c "import open3d, rclpy" && zenoh-bridge-ros2dds --help > /dev/null'
           docker run --rm "h3ct0rdcc/ros2_dev:$DISTRO-desktop" bash -lc '/home/ubuntu/.py3/bin/python -c "import cv_bridge, open3d"'
 
+      - name: Test the simulators in the full image
+        run: |
+          docker buildx bake --load --set "*.platform=linux/$ARCH" "$DISTRO-full"
+          docker run --rm "h3ct0rdcc/ros2_dev:$DISTRO-full" bash -lc \
+            'ros2 pkg prefix ros_gz_sim > /dev/null && ros2 pkg prefix mujoco_ros2_control > /dev/null && /home/ubuntu/.py3/bin/python -c "import mujoco; mujoco.MjModel.from_xml_string(\"<mujoco/>\")"'
+          docker image rm "h3ct0rdcc/ros2_dev:$DISTRO-full"
+
       - name: Test Zenoh between two containers
         run: |
           docker network create zenoh-ci
@@ -147,6 +154,9 @@ jobs:
           else
             [ "$env_out" = "ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET" ]
           fi
+
+      - name: Test the VS Code server volume
+        run: docker exec -u ubuntu "ros2_dev_$DISTRO" touch /home/ubuntu/.vscode-server/ci-write-test
 
       - name: Container logs
         if: failure()
