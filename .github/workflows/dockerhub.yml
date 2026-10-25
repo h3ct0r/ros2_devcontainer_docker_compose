@@ -1,0 +1,41 @@
+name: Docker Hub overview
+
+# Copies docs/dockerhub.md to the Docker Hub page of h3ct0rdcc/ros2_dev, and
+# docs/dockerhub-legacy.md to the old h3ct0rdcc/ros2_humble_development page.
+# Needs DOCKERHUB_USERNAME and DOCKERHUB_DESCRIPTION_TOKEN, a Docker Hub access token
+# with read, write and delete scope (Docker Hub requires it to edit descriptions).
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/dockerhub.md"
+      - "docs/dockerhub-legacy.md"
+      - ".github/workflows/dockerhub.yml"
+  workflow_dispatch:
+
+jobs:
+  overview:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update h3ct0rdcc/ros2_dev
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
+          repository: h3ct0rdcc/ros2_dev
+          short-description: "ROS 2 Humble, Jazzy and Lyrical dev images: browser desktop, VS Code, Zenoh. amd64 + arm64"
+          readme-filepath: docs/dockerhub.md
+
+      - name: Update h3ct0rdcc/ros2_humble_development
+        uses: peter-evans/dockerhub-description@v5
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_DESCRIPTION_TOKEN }}
+          repository: h3ct0rdcc/ros2_humble_development
+          short-description: "Moved to h3ct0rdcc/ros2_dev. These Humble tags are updated until May 2027."
+          readme-filepath: docs/dockerhub-legacy.md
