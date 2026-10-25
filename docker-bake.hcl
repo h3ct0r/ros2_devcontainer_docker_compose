@@ -6,7 +6,8 @@
 #
 # Tags: <IMAGE>:<distro>-<target>, <IMAGE>:<distro> (= full), <IMAGE>:latest (= jazzy-full).
 # Humble also keeps the old <LEGACY_IMAGE>:<target> tags until its end of life (May 2027).
-# CACHE=1 also pushes a registry build cache per target (needs push access).
+# Builds read the registry cache that CI pushes for each distro and architecture
+# (<IMAGE>:buildcache-<distro>-<arch>, mode=max, so it covers every target).
 
 variable "IMAGE" {
   default = "h3ct0rdcc/ros2_dev"
@@ -18,10 +19,6 @@ variable "LEGACY_IMAGE" {
 
 variable "DEFAULT_DISTRO" {
   default = "jazzy"
-}
-
-variable "CACHE" {
-  default = ""
 }
 
 # CI pushes each architecture by digest and creates the tags in a later step
@@ -86,8 +83,10 @@ target "image" {
     BASE_IMAGE = base_image(distro)
   }
   tags       = NO_TAGS != "" ? [] : tags(distro, tgt)
-  cache-from = ["type=registry,ref=${IMAGE}:buildcache-${distro}-${tgt}"]
-  cache-to   = CACHE != "" ? ["type=registry,ref=${IMAGE}:buildcache-${distro}-${tgt},mode=max"] : []
+  cache-from = [
+    "type=registry,ref=${IMAGE}:buildcache-${distro}-amd64",
+    "type=registry,ref=${IMAGE}:buildcache-${distro}-arm64",
+  ]
 }
 
 # Single-arch tags kept for existing users of the old Humble image (same content as humble-full)
@@ -95,12 +94,10 @@ target "legacy-humble-amd64" {
   inherits  = ["humble-full"]
   platforms = ["linux/amd64"]
   tags      = ["${LEGACY_IMAGE}:amd64"]
-  cache-to  = []
 }
 
 target "legacy-humble-arm64" {
   inherits  = ["humble-full"]
   platforms = ["linux/arm64"]
   tags      = ["${LEGACY_IMAGE}:arm64"]
-  cache-to  = []
 }
