@@ -52,6 +52,16 @@ The devcontainer and `./dev.sh` share the same container name and compose projec
 
 VS Code waits for `postCreateCommand`, so the first open of a large workspace takes as long as its first build.
 
+### Terminals and the desktop tab at startup
+
+When the container opens, VS Code runs three tasks from `~/.vscode/tasks.json`: two terminals in `~/ros2_ws` and the browser desktop in a Simple Browser tab. VS Code only runs tasks on folder open after you allow it, once per machine: click **Allow** on the "automatic tasks" prompt. If you missed it, add this to your user settings (it can't be set from `devcontainer.json`):
+
+```json
+"task.allowAutomaticTasks": "on"
+```
+
+Then run **Developer: Reload Window**. The workspace must also be trusted.
+
 ### User and files
 
 The VS Code session runs as the container's user: `ubuntu` normally, `root` under rootless Docker. Under rootless Docker, the container's root is your host user, so files in `local_mount` stay yours either way. See [Rootless Docker](hosts.md#rootless-docker-and-podman).
