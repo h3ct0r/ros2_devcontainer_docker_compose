@@ -54,8 +54,12 @@ or give this one other ports in `.env` (`NOVNC_PORT`, `CODE_SERVER_PORT`, `SSH_P
 ## GUI apps don't appear
 
 - **macOS:** apps open on the browser desktop (http://localhost:3080), not on the Mac's screen.
-- **Linux, host screen:** check that `DISPLAY` is set in the shell you ran `./dev.sh up` from, and that `$XAUTHORITY` points to a file. Then recreate the container with `./dev.sh up`.
+- **Linux, host screen:** `./dev.sh status` shows the display it found and where it came from. `Authorization required, but no authorization protocol specified` means the container has no valid cookie: log in to the desktop, then run `./dev.sh up` (or reopen the devcontainer) so the cookie is copied again. After logging out and in, the old cookie stops working; the `xhost +SI:localuser` grant that `./dev.sh` adds covers that only when your host user is uid 1000 (check with `id -u`) or Docker is rootless.
 - **Linux, browser desktop:** start the app with `DISPLAY=:2`.
+
+## VS Code doesn't open the terminals or the desktop tab
+
+VS Code asks once per machine before it runs tasks when a folder opens. Allow them, or set `"task.allowAutomaticTasks": "on"` in your user settings; see [VS Code](vscode.md#terminals-and-the-desktop-tab-at-startup).
 
 ## No ROS topics from another machine
 

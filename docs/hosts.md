@@ -29,7 +29,7 @@ With rootful Docker Engine, `./dev.sh` uses host networking and passes the host'
 
 To leave the devices out, set `DEVICES=none`.
 
-**Your screen.** GUI apps open on the host display by default. The X11 cookie from `$XAUTHORITY` is handed over, so no `xhost +` is needed, and this also works on Wayland desktops through XWayland. Use `DISPLAY=:2` to send an app to the browser desktop instead.
+**Your screen.** GUI apps open on the host display by default. `./dev.sh` hands over the display and its X11 cookie, so no `xhost +` is needed, and this also works on Wayland desktops through XWayland. When the shell or VS Code has no `DISPLAY` or `XAUTHORITY` (an SSH session, some launchers), `./dev.sh` takes them from the logged-in desktop session; `./dev.sh status` shows which display it uses. The cookie is kept in `~/.cache/ros2_dev/Xauthority` and refreshed on every `./dev.sh` run, including when VS Code opens a devcontainer. As a fallback for a stale cookie, `./dev.sh` also runs `xhost +SI:localuser:$USER`, which lets in processes of your own user only; it reaches the container when your user is uid 1000, or under rootless Docker. Use `DISPLAY=:2` to send an app to the browser desktop instead.
 
 ## NVIDIA GPU
 

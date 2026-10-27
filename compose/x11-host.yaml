@@ -1,7 +1,8 @@
 # The host's X server (Linux): its socket, plus its cookie, so XWayland accepts the
-# container without xhost (the entrypoint adds the cookie for $DISPLAY).
+# container without xhost (the entrypoint adds the cookie for $DISPLAY). dev.sh copies the
+# desktop session's cookie to X11_COOKIE, a path that stays the same across logins.
 services:
   ros2:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ${XAUTHORITY:-/dev/null}:/tmp/.host-xauthority:ro
+      - ${X11_COOKIE:-/dev/null}:/tmp/.host-xauthority:ro

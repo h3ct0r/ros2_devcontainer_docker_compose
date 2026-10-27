@@ -189,6 +189,47 @@ export COMPOSE_FILE="$files" COMPOSE_PATH_SEPARATOR=":"
 export ROS_DISTRO="$(get ROS_DISTRO)" TARGET="$(get TARGET)"
 if [ "$(get PLATFORM)" != native ]; then export PLATFORM="$(get PLATFORM)"; else unset PLATFORM; fi
 
+# --- 4. host display (Linux) -------------------------------------------------------
+# GUI apps on the host screen need its DISPLAY and X11 cookie. A shell without them (ssh,
+# some launchers, a VS Code started elsewhere) borrows the logged-in desktop session's.
+# The cookie is copied to a fixed path, rewritten in place on every run: the session's
+# file gets a new name at each login, and a container restarted after a reboot would
+# otherwise point to a file that no longer exists.
+display_source=""
+if [ "$os" != Darwin ]; then
+    display_source=environment
+    session_env=$(systemctl --user show-environment 2>/dev/null || true)
+    for var in DISPLAY XAUTHORITY; do
+        if [ -z "${!var:-}" ]; then
+            value=$(printf '%s\n' "$session_env" | sed -n "s/^$var=//p")
+            if [ -n "$value" ]; then
+                export "$var=$value"
+                display_source="desktop session"
+            fi
+        fi
+    done
+    if [ -z "${XAUTHORITY:-}" ] && [ -r "$HOME/.Xauthority" ]; then export XAUTHORITY="$HOME/.Xauthority"; fi
+    [ -n "${DISPLAY:-}" ] || display_source="none found, using :0"
+
+    export X11_COOKIE="$HOME/.cache/ros2_dev/Xauthority"
+    mkdir -p "$(dirname "$X11_COOKIE")"
+    if [ -n "${XAUTHORITY:-}" ] && [ -r "$XAUTHORITY" ]; then
+        cat "$XAUTHORITY" > "$X11_COOKIE"
+    elif [ ! -f "$X11_COOKIE" ]; then
+        : > "$X11_COOKIE"
+    fi
+
+    # Fallback for a stale or missing cookie (e.g. after logging out and in): let processes
+    # of this host user in without one. Reaches the container's ubuntu (uid 1000) when this
+    # user is uid 1000, and root under rootless Docker. Lasts until the X server restarts.
+    case "$command" in
+        up | configure)
+            if [ -n "${DISPLAY:-}" ] && command -v xhost >/dev/null; then
+                xhost "+SI:localuser:$(id -un)" >/dev/null 2>&1 || true
+            fi ;;
+    esac
+fi
+
 # Records the selection at the end of .env (created from .env.example if missing),
 # so plain `docker compose` commands use it too
 write_env() {
@@ -207,6 +248,7 @@ write_env() {
         echo "ROS_DISTRO=$ROS_DISTRO"
         echo "TARGET=$TARGET"
         [ -n "${PLATFORM:-}" ] && echo "PLATFORM=$PLATFORM"
+        [ -n "${X11_COOKIE:-}" ] && echo "X11_COOKIE=$X11_COOKIE"
         echo "$BLOCK_END <<<"
     } > .env
     rm -f "$tmp"
@@ -217,6 +259,7 @@ print_status() {
     for name in $SETTINGS; do
         printf '  %-11s %-14s %s\n' "$name" "$(get "$name")" "($(source_of "$name"))"
     done
+    [ -n "$display_source" ] && printf '  %-11s %-14s %s\n' "display" "${DISPLAY:-:0}" "($display_source)"
     printf '  %-11s %s\n' "compose" "${COMPOSE_FILE//:/ }"
 }
 
@@ -238,7 +281,7 @@ print_access() {
     echo "  shell        ./dev.sh shell"
 }
 
-# --- 4. run -----------------------------------------------------------------------
+# --- 5. run -----------------------------------------------------------------------
 case "$command" in
     status)
         echo "ROS $ROS_DISTRO, image ${IMAGE:-h3ct0rdcc/ros2_dev}:$ROS_DISTRO-$TARGET, Docker $engine on $os"
