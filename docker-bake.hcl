@@ -7,7 +7,12 @@
 # Tags: <IMAGE>:<distro>-<target>, <IMAGE>:<distro> (= full), <IMAGE>:latest (= jazzy-full).
 # Humble also keeps the old <LEGACY_IMAGE>:<target> tags until its end of life (May 2027).
 # Builds read the registry cache that CI pushes for each distro and architecture
-# (<IMAGE>:buildcache-<distro>-<arch>, mode=max, so it covers every target).
+# (<CACHE_IMAGE>:buildcache-<distro>-<arch>, mode=max, so it covers every target). The
+# cache lives on GHCR, so builds make fewer requests against Docker Hub's rate limits.
+
+variable "CACHE_IMAGE" {
+  default = "ghcr.io/h3ct0r/ros2_dev"
+}
 
 variable "IMAGE" {
   default = "h3ct0rdcc/ros2_dev"
@@ -84,8 +89,8 @@ target "image" {
   }
   tags       = NO_TAGS != "" ? [] : tags(distro, tgt)
   cache-from = [
-    "type=registry,ref=${IMAGE}:buildcache-${distro}-amd64",
-    "type=registry,ref=${IMAGE}:buildcache-${distro}-arm64",
+    "type=registry,ref=${CACHE_IMAGE}:buildcache-${distro}-amd64",
+    "type=registry,ref=${CACHE_IMAGE}:buildcache-${distro}-arm64",
   ]
 }
 
