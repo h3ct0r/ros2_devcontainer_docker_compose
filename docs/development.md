@@ -78,8 +78,8 @@ flowchart LR
 | Event | What happens |
 |---|---|
 | Pull request to `main` | build and test every distro on both architectures; nothing is published |
-| Push to `main` | same, then push each image by digest and create the multi-arch tags on Docker Hub and GHCR |
-| Manual run (`workflow_dispatch`) | same as its branch |
+| Push to `main` | same; if the push changed what goes into the images, also push each image by digest and create the multi-arch tags on Docker Hub and GHCR |
+| Manual run (`workflow_dispatch`) on `main` | build, test and publish, whatever changed |
 
 The tests in each job:
 - the base tools (`ros2`, `colcon`, Open3D, `rclpy`, the Zenoh bridge) and `cv_bridge` in the venv;
@@ -87,7 +87,9 @@ The tests in each job:
 - `./dev.sh up` with the desktop: noVNC, code-server and SSH answer;
 - the discovery variable is the right one for the distro.
 
-CI runs only when files that affect the images change: `docker/`, `configs/`, `third_party_pkgs/`, the compose files, `dev.sh`, `docker-bake.hcl` or the workflow. Documentation changes don't rebuild images.
+CI runs only when files that affect the images or the setup change: `docker/`, `configs/`, `third_party_pkgs/`, the compose files, `dev.sh`, `docker-bake.hcl` or the workflow. Documentation changes don't run it.
+
+On `main`, only changes to `docker/`, `configs/`, `third_party_pkgs/`, `docker-bake.hcl` or the workflow publish new images. A push that only touches `dev.sh` or the compose files is built and tested but not published, since those files aren't part of the images. That keeps the tags from moving to rebuilt but identical images, and keeps Docker Hub requests down; two full publishes in a row can hit its rate limit (HTTP 429).
 
 **Secrets** (repository settings → Secrets and variables → Actions):
 

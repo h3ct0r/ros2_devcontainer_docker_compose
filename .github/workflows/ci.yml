@@ -3,7 +3,10 @@ name: Images
 # Builds and tests every distro natively on GitHub's amd64 and arm64 runners. On main,
 # each job also pushes its images by digest, and the publish job joins them into the
 # multi-arch tags on Docker Hub and GHCR (the same tags docker-bake.hcl defines).
-# Needs the repository secrets DOCKERHUB_USERNAME and DOCKERHUB_TOKEN to publish.
+# A push to main publishes only when something that goes into the images changed (see the
+# changes job); a manual run always publishes. dev.sh and the compose files are tested
+# but not part of the images. Needs the repository secrets DOCKERHUB_USERNAME and
+# DOCKERHUB_TOKEN to publish.
 
 on:
   push:
@@ -41,11 +44,42 @@ env:
   DOCKERHUB_IMAGE: docker.io/h3ct0rdcc/ros2_dev
   GHCR_IMAGE: ghcr.io/h3ct0r/ros2_dev
   LEGACY_IMAGE: docker.io/h3ct0rdcc/ros2_humble_development
-  PUBLISH: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
 
 jobs:
+  # Whether this push changed the images: their sources (docker/, configs/,
+  # third_party_pkgs/), their base images and tags (docker-bake.hcl), or how they are
+  # published (this workflow). Anything else is tested without publishing.
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      image: ${{ steps.diff.outputs.image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes to the images
+        id: diff
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != push ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "image=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA")
+          echo "$changed"
+          if grep -q -E '^(docker/|configs/|third_party_pkgs/|docker-bake\.hcl$|\.github/workflows/ci\.yml$)' <<< "$changed"; then
+            echo "image=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "image=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Only files outside the images changed: tested, not published"
+          fi
+
   build:
     name: ${{ matrix.distro }} ${{ matrix.arch }}
+    needs: changes
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 180
     permissions:
@@ -59,6 +93,7 @@ jobs:
     env:
       DISTRO: ${{ matrix.distro }}
       ARCH: ${{ matrix.arch }}
+      PUBLISH: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.changes.outputs.image == 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -196,8 +231,8 @@ jobs:
           retention-days: 1
 
   publish:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.changes.outputs.image == 'true'
+    needs: [changes, build]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
