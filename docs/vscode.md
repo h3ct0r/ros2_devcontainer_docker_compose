@@ -48,7 +48,7 @@ The devcontainer and `./dev.sh` share the same container name and compose projec
 | `initializeCommand` (host) | [.devcontainer/initialize.sh](../.devcontainer/initialize.sh) | writes `.devcontainer/.generated/<distro>/compose.yaml` |
 | `onCreateCommand` | [/onCreate.sh](../configs/devcontainer/onCreate.sh) | nothing yet; a hook for your own setup |
 | `postCreateCommand` | [/postCreate.sh](../configs/devcontainer/postCreate.sh) | `apt-get update`, `rosdep install` and `colcon build` of the workspace |
-| `postAttachCommand` | [/postAttach.sh](../configs/devcontainer/postAttach.sh) | clears stale X11 sockets |
+| `postAttachCommand` | [/postAttach.sh](../configs/devcontainer/postAttach.sh) | nothing yet; a hook that runs on every attach |
 
 VS Code waits for `postCreateCommand`, so the first open of a large workspace takes as long as its first build.
 
