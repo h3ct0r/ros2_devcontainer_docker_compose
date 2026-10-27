@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # IMPORTANT: ---------------------------------------------------------- #
-# This script is executed on the HOST machine after attaching to the    #
-# Docker container                                                      #
+# This script is executed in the CONTAINER every time VS Code attaches  #
+# to it (postAttachCommand).                                            #
 # --------------------------------------------------------------------- #
 
-# touch postattach_script_executed_$(date '+%Y-%m-%d_%H-%M-%S')
+# Nothing to do yet: a hook for your own setup. Stale VNC lock and socket
+# files are removed by /usr/local/bin/vnc_run.sh before the VNC server starts.
 
-find /tmp/.X11-unix/ -maxdepth 1 -type f -name '*' -delete || true
-rm /tmp/.X11-unix/X2 || true
+# touch postattach_script_executed_$(date '+%Y-%m-%d_%H-%M-%S')
