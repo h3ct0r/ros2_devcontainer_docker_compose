@@ -218,6 +218,16 @@ if [ "$os" != Darwin ]; then
     elif [ ! -f "$X11_COOKIE" ]; then
         : > "$X11_COOKIE"
     fi
+
+    # Fallback for a stale or missing cookie (e.g. after logging out and in): let processes
+    # of this host user in without one. Reaches the container's ubuntu (uid 1000) when this
+    # user is uid 1000, and root under rootless Docker. Lasts until the X server restarts.
+    case "$command" in
+        up | configure)
+            if [ -n "${DISPLAY:-}" ] && command -v xhost >/dev/null; then
+                xhost "+SI:localuser:$(id -un)" >/dev/null 2>&1 || true
+            fi ;;
+    esac
 fi
 
 # Records the selection at the end of .env (created from .env.example if missing),
