@@ -63,6 +63,16 @@ or give this one other ports in `.env` (`NOVNC_PORT`, `CODE_SERVER_PORT`, `SSH_P
 - Check that both sides use the same `ROS_DOMAIN_ID`, and that `ROS_DISCOVERY` isn't `localhost`.
 - Wi-Fi networks often block multicast. Use Zenoh there too.
 
+## Every node is listed twice
+
+```text
+WARNING: Be aware that there are nodes in the graph that share an exact name, which can have unintended side effects.
+```
+
+and topics arrive at twice their rate. Another container or machine on the same network and `ROS_DOMAIN_ID` runs the same nodes. With `ROS_DISCOVERY=subnet`, all containers on one Docker network share a ROS graph, across distros too. Find the other one with `docker ps`, or keep them apart with different `ROS_DOMAIN_ID` values or `ROS_DISCOVERY=localhost`.
+
+The same happens when a `ros2 launch` is killed and its nodes keep running: check with `pgrep -a -f <node name>`.
+
 ## Rootless Docker: no host network
 
 ```text
