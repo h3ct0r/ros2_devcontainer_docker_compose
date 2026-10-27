@@ -8,8 +8,7 @@
 # Humble also keeps the old <LEGACY_IMAGE>:<target> tags until its end of life (May 2027).
 # Builds read the registry cache that CI pushes for each distro and architecture
 # (<CACHE_IMAGE>:buildcache-<distro>-<arch>, mode=max, so it covers every target). The
-# cache and the base images come from GHCR and Amazon's mirror of Docker's official
-# images, which keeps builds clear of Docker Hub's pull rate limits.
+# cache lives on GHCR, so builds make fewer requests against Docker Hub's rate limits.
 
 variable "CACHE_IMAGE" {
   default = "ghcr.io/h3ct0r/ros2_dev"
@@ -36,9 +35,9 @@ variable "NO_TAGS" {
 function "base_image" {
   params = [distro]
   result = {
-    humble  = "public.ecr.aws/docker/library/ros:humble-ros-base-jammy@sha256:566b87e6dfc48392189a9c32e594e84060fa9948de93b04e536f39475a1f6963"
-    jazzy   = "public.ecr.aws/docker/library/ros:jazzy-ros-base-noble@sha256:103b6c417973394659af6804d4917cd489b91e5ed22eb7bef263025a3bed2410"
-    lyrical = "public.ecr.aws/docker/library/ros:lyrical-ros-base-resolute@sha256:d9078270abaeae65497036085f1654c75ec0a95e2aca5ecf7ddc0846a6cd69e1"
+    humble  = "ros:humble-ros-base-jammy@sha256:566b87e6dfc48392189a9c32e594e84060fa9948de93b04e536f39475a1f6963"
+    jazzy   = "ros:jazzy-ros-base-noble@sha256:103b6c417973394659af6804d4917cd489b91e5ed22eb7bef263025a3bed2410"
+    lyrical = "ros:lyrical-ros-base-resolute@sha256:d9078270abaeae65497036085f1654c75ec0a95e2aca5ecf7ddc0846a6cd69e1"
   }[distro]
 }
 
