@@ -127,7 +127,7 @@ jobs:
       - name: Build all targets
         run: |
           docker buildx bake --set "*.platform=linux/$ARCH" \
-            --set "*.cache-from=type=registry,ref=$DOCKERHUB_IMAGE:buildcache-$DISTRO-$ARCH" \
+            --set "*.cache-from=type=registry,ref=$GHCR_IMAGE:buildcache-$DISTRO-$ARCH" \
             "$DISTRO-base" "$DISTRO-robot" "$DISTRO-desktop" "$DISTRO-full"
 
       - name: Load the test images
@@ -208,8 +208,8 @@ jobs:
         run: |
           docker buildx bake --set "*.platform=linux/$ARCH" \
             --set "*.output=type=image,\"name=$DOCKERHUB_IMAGE,$GHCR_IMAGE\",push-by-digest=true,name-canonical=true,push=true" \
-            --set "*.cache-from=type=registry,ref=$DOCKERHUB_IMAGE:buildcache-$DISTRO-$ARCH" \
-            --set "$DISTRO-full.cache-to=type=registry,ref=$DOCKERHUB_IMAGE:buildcache-$DISTRO-$ARCH,mode=max" \
+            --set "*.cache-from=type=registry,ref=$GHCR_IMAGE:buildcache-$DISTRO-$ARCH" \
+            --set "$DISTRO-full.cache-to=type=registry,ref=$GHCR_IMAGE:buildcache-$DISTRO-$ARCH,mode=max" \
             --metadata-file metadata.json \
             "$DISTRO-base" "$DISTRO-robot" "$DISTRO-desktop" "$DISTRO-full"
           mkdir -p digests

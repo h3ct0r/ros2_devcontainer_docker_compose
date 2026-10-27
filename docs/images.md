@@ -90,4 +90,4 @@ docker buildx bake jazzy                                                 # all o
 docker buildx bake --print release                                       # everything CI publishes
 ```
 
-Local builds reuse the layers CI has already built: they read the registry cache that CI pushes for each distro and architecture (`h3ct0rdcc/ros2_dev:buildcache-<distro>-<arch>`). apt downloads stay in BuildKit cache mounts, so rebuilding after a package-list change is quick. See [Development](development.md) for changing what goes into an image.
+Local builds reuse the layers CI has already built: they read the registry cache that CI pushes for each distro and architecture (`ghcr.io/h3ct0r/ros2_dev:buildcache-<distro>-<arch>`). apt downloads stay in BuildKit cache mounts, so rebuilding after a package-list change is quick. See [Development](development.md) for changing what goes into an image.
