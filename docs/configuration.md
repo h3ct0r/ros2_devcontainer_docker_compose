@@ -18,14 +18,15 @@ From lowest to highest priority:
 ```text
 $ ./dev.sh status
 ROS jazzy, image h3ct0rdcc/ros2_dev:jazzy-desktop, Docker 29.1.3 on Darwin
-  ROS_DISTRO  jazzy          (default)
-  TARGET      desktop        (default)
-  GPU         none           (auto: macOS)
-  MODE        rootful        (auto: Docker runs as root)
-  NETWORK     bridge         (auto: Docker Desktop on macOS)
-  DEVICES     none           (auto: macOS)
-  PLATFORM    native         (default)
-  compose     compose.yaml compose/net-bridge.yaml compose/macos.yaml
+  ROS_DISTRO    jazzy          (default)
+  TARGET        desktop        (default)
+  GPU           none           (auto: macOS)
+  MODE          rootful        (auto: Docker runs as root)
+  NETWORK       bridge         (auto: Docker Desktop on macOS)
+  DEVICES       none           (auto: macOS)
+  PLATFORM      native         (default)
+  COMPOSE_EXTRA                (default)
+  compose       compose.yaml compose/net-bridge.yaml compose/macos.yaml
 ```
 
 ## Image and host settings
@@ -39,6 +40,7 @@ ROS jazzy, image h3ct0rdcc/ros2_dev:jazzy-desktop, Docker 29.1.3 on Darwin
 | `NETWORK` | `auto`, `host`, `bridge` | `auto` | `bridge` on macOS and on rootless Docker older than 29.5; `host` on other Linux hosts |
 | `DEVICES` | `auto`, `none`, `all` | `auto` | `all` on rootful Linux; `none` on macOS and rootless |
 | `PLATFORM` | `native`, `linux/amd64`, `linux/arm64` | `native` | – (the non-native one runs under emulation) |
+| `COMPOSE_EXTRA` | colon-separated compose files, relative to the repo | empty | – (see [How it works](#how-it-works)) |
 
 Any value other than `auto` wins over the detection. For example, on an NVIDIA machine:
 
@@ -87,6 +89,7 @@ Changes take effect on the next `./dev.sh up`, which recreates the container if 
   --gpu auto|none|nvidia|jetson     --mode auto|rootful|rootless
   --network auto|host|bridge        --devices auto|none|all
   --platform native|linux/amd64|linux/arm64
+  --compose-extra FILE[:FILE...]    overlays of your own, appended after the selected ones
 ```
 
 ## How it works
@@ -116,6 +119,8 @@ flowchart LR
 | `x11-host.yaml` | Linux | the host's X11 socket and cookie, for GUI apps on your screen |
 | `macos.yaml` | macOS | GUI apps open on the browser desktop (`DISPLAY=:2`) |
 | `platform.yaml` | `PLATFORM` isn't `native` | runs the other architecture under emulation |
+
+Overlays of your own go in `COMPOSE_EXTRA`, colon-separated and relative to the repo root, e.g. `COMPOSE_EXTRA=compose/my-devices.yaml:compose/dev-links.yaml` in `.env` (or `--compose-extra` for one run). They are appended after the selected ones, so they can override anything above, and `dev.sh` refuses to start if one of them is missing. A project that vendors `dev.sh` can add its overlays this way without changing the script.
 
 `dev.sh up` appends the chosen list to `.env` between `# >>> written by ./dev.sh` markers, as `COMPOSE_FILE`. Plain `docker compose ps`, `logs`, `pull` and `down` then use the same selection. Don't edit that block; it's rewritten on every run.
 
