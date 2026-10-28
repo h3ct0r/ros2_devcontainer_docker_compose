@@ -19,6 +19,7 @@
 #   --gpu auto|none|nvidia|jetson     --mode auto|rootful|rootless
 #   --network auto|host|bridge        --devices auto|none|all
 #   --platform native|linux/amd64|linux/arm64
+#   --compose-extra FILE[:FILE...]    overlays of your own, appended after the selected ones
 #
 # ROS_DISTRO is only taken from .env and --distro: a ROS setup sourced on the host
 # exports its own ROS_DISTRO, which must not pick the container's distro.
@@ -28,7 +29,7 @@ cd "$(dirname "$0")"
 
 BLOCK_START="# >>> written by ./dev.sh"
 BLOCK_END="# <<< written by ./dev.sh"
-SETTINGS="ROS_DISTRO TARGET GPU MODE NETWORK DEVICES PLATFORM"
+SETTINGS="ROS_DISTRO TARGET GPU MODE NETWORK DEVICES PLATFORM COMPOSE_EXTRA"
 EXTRA_KEYS="NOVNC_PORT CODE_SERVER_PORT SSH_PORT"
 
 die() {
@@ -37,7 +38,7 @@ die() {
 }
 
 usage() {
-    sed -n '2,24p' "$0" | sed -E 's/^# ?//'
+    sed -n '2,25p' "$0" | sed -E 's/^# ?//'
 }
 
 # Sets a setting and remembers where it came from: set_value NAME VALUE SOURCE
@@ -53,6 +54,7 @@ set_value ROS_DISTRO jazzy default
 set_value TARGET desktop default
 for name in GPU MODE NETWORK DEVICES; do set_value "$name" auto default; done
 set_value PLATFORM native default
+set_value COMPOSE_EXTRA "" default
 
 if [ -f .env ]; then
     in_block=0
@@ -83,7 +85,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         up | down | shell | status | logs | build | configure) command=$1 ;;
         -h | --help | help) usage; exit 0 ;;
-        --distro | --target | --gpu | --mode | --network | --devices | --platform | --output)
+        --distro | --target | --gpu | --mode | --network | --devices | --platform | --compose-extra | --output)
             [ $# -ge 2 ] || die "$1 needs a value"
             case "$1" in
                 --distro) set_value ROS_DISTRO "$2" option ;;
@@ -93,6 +95,7 @@ while [ $# -gt 0 ]; do
                 --network) set_value NETWORK "$2" option ;;
                 --devices) set_value DEVICES "$2" option ;;
                 --platform) set_value PLATFORM "$2" option ;;
+                --compose-extra) set_value COMPOSE_EXTRA "$2" option ;;
                 --output) output=$2 ;;
             esac
             shift ;;
@@ -185,6 +188,14 @@ esac
 if [ "$os" = Darwin ]; then files="$files:compose/macos.yaml"; else files="$files:compose/x11-host.yaml"; fi
 [ "$(get PLATFORM)" != native ] && files="$files:compose/platform.yaml"
 
+# Overlays of your own (COMPOSE_EXTRA, colon-separated, relative to this directory) go last
+IFS=: read -ra extra <<< "$(get COMPOSE_EXTRA)"
+for file in ${extra[@]+"${extra[@]}"}; do  # empty-array safe under set -u in bash < 4.4
+    [ -n "$file" ] || continue
+    [ -f "$file" ] || die "COMPOSE_EXTRA from $(source_of COMPOSE_EXTRA): '$file' is not a file (paths are relative to $PWD)"
+    files="$files:$file"
+done
+
 export COMPOSE_FILE="$files" COMPOSE_PATH_SEPARATOR=":"
 export ROS_DISTRO="$(get ROS_DISTRO)" TARGET="$(get TARGET)"
 if [ "$(get PLATFORM)" != native ]; then export PLATFORM="$(get PLATFORM)"; else unset PLATFORM; fi
@@ -257,10 +268,10 @@ write_env() {
 print_status() {
     local name
     for name in $SETTINGS; do
-        printf '  %-11s %-14s %s\n' "$name" "$(get "$name")" "($(source_of "$name"))"
+        printf '  %-13s %-14s %s\n' "$name" "$(get "$name")" "($(source_of "$name"))"
     done
-    [ -n "$display_source" ] && printf '  %-11s %-14s %s\n' "display" "${DISPLAY:-:0}" "($display_source)"
-    printf '  %-11s %s\n' "compose" "${COMPOSE_FILE//:/ }"
+    [ -n "$display_source" ] && printf '  %-13s %-14s %s\n' "display" "${DISPLAY:-:0}" "($display_source)"
+    printf '  %-13s %s\n' "compose" "${COMPOSE_FILE//:/ }"
 }
 
 print_access() {
